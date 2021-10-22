@@ -1,0 +1,1 @@
+brownie test -vv -s
