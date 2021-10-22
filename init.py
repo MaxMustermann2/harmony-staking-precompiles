@@ -94,7 +94,7 @@ initial_funding = [
         "signed-raw-tx": "0xf86f06843b9aca008252088080948ff9af553195936502f09a138532f84c7ca704788a152d02c7e14af68000008028a01a4c6dbc9177cf9057de09d4f654950a38aba83e98502d59b478f899b196c4aaa00652c34a53082aee876713954ce70a21288c3727c29fb9c729ce10f19d106370",
     }
 ]
-print("Waiting for node to start producing blocks")
+print("Waiting for node at {} to start producing blocks".format(test_net))
 current_block_num = 0
 timeout = 60
 start_time = time.time()
@@ -119,4 +119,4 @@ if current_block_num > 0:
                 continue
     print("Done")
 else:
-    print("Fuck off")
+    print("Node didn't start in {} seconds, consider restarting it".format(timeout))
