@@ -67,7 +67,7 @@
 				
 				<option value="file5">github.com/harmony-one/harmony/core/vm/contracts_write.go (82.0%)</option>
 				
-				<option value="file6">github.com/harmony-one/harmony/core/vm/evm.go (37.4%)</option>
+				<option value="file6">github.com/harmony-one/harmony/core/vm/evm.go (37.0%)</option>
 				
 				<option value="file7">github.com/harmony-one/harmony/crypto/bls/bls.go (74.4%)</option>
 				
@@ -2849,18 +2849,18 @@ func (bc *BlockChain) prepareStakingMetaData(
                                                 newDelegations,
                                                 bc,
                                                 blockNum); err != nil </span><span class="cov0" title="0">{
-                                                        return nil, nil, err
-                                                }</span>
-                                } else<span class="cov8" title="1"> if delegate, ok := stakeMsg.(*staking.Delegate); ok </span><span class="cov8" title="1">{
+                                                return nil, nil, err
+                                        }
+</span>                                } else<span class="cov8" title="1"> if delegate, ok := stakeMsg.(*staking.Delegate); ok </span><span class="cov8" title="1">{
                                         if err := processDelegateMetadata(delegate,
                                                 newValidators,
                                                 newDelegations,
                                                 state,
                                                 bc,
                                                 blockNum); err != nil </span><span class="cov0" title="0">{
-                                                        return nil, nil, err
-                                                }</span>
-                                }
+                                                return nil, nil, err
+                                        }
+</span>                                }
                         }
                         // delete the temporary entry later
                         <span class="cov8" title="1">delete(txHashToStakeMsgs, txn.Hash().Hex())</span>
@@ -2877,31 +2877,31 @@ func (bc *BlockChain) prepareStakingMetaData(
                 }</span>
 
                 <span class="cov8" title="1">switch txn.StakingType() </span>{
-                        case staking.DirectiveCreateValidator:<span class="cov8" title="1">
-                                createValidator := decodePayload.(*staking.CreateValidator)
-                                if err := processCreateValidatorMetadata(createValidator,
-                                        &amp;newValidators,
-                                        newDelegations,
-                                        bc,
-                                        blockNum); err != nil </span><span class="cov0" title="0">{
-                                                return nil, nil, err
-                                        }</span>
-                        case staking.DirectiveEditValidator:<span class="cov0" title="0"></span>
-                        case staking.DirectiveDelegate:<span class="cov8" title="1">
-                                delegate := decodePayload.(*staking.Delegate)
-                                if err := processDelegateMetadata(delegate,
-                                        newValidators,
-                                        newDelegations,
-                                        state,
-                                        bc,
-                                        blockNum); err != nil </span><span class="cov0" title="0">{
-                                                return nil, nil, err
-                                        }</span>
-
-                        case staking.DirectiveUndelegate:<span class="cov0" title="0"></span>
-                        case staking.DirectiveCollectRewards:<span class="cov0" title="0"></span>
-                        default:<span class="cov0" title="0"></span>
-                }
+                case staking.DirectiveCreateValidator:
+                        createValidator := decodePayload.(*staking.CreateValidator)
+                        if err := processCreateValidatorMetadata(createValidator,
+                                &amp;newValidators,
+                                newDelegations,
+                                bc,
+                                blockNum); err != nil {</span><span class="cov0" title="0">
+                                return nil, nil, err
+                        }
+</span>                case staking.DirectiveEditValidator:
+</span>                case staking.DirectiveDelegate:
+                        delegate := decodePayload.(*staking.Delegate)
+                        if err := processDelegateMetadata(delegate,
+                                newValidators,
+                                newDelegations,
+                                state,
+                                bc,
+                                blockNum); err != nil {</span><span class="cov0" title="0">
+                                return nil, nil, err
+                        }
+</span>
+                case staking.DirectiveUndelegate:
+</span>                case staking.DirectiveCollectRewards:
+</span>                default:
+</span>                }
         }
 
         <span class="cov8" title="1">return newValidators, newDelegations, nil</span>
@@ -3224,18 +3224,18 @@ package core
 
 import (
         "bytes"
-        "sort"
         "errors"
         "math/big"
+        "sort"
 
-        "github.com/harmony-one/harmony/internal/params"
         "github.com/ethereum/go-ethereum/common"
         "github.com/harmony-one/harmony/block"
         consensus_engine "github.com/harmony-one/harmony/consensus/engine"
         "github.com/harmony-one/harmony/core/types"
         "github.com/harmony-one/harmony/core/vm"
-        stakingTypes "github.com/harmony-one/harmony/staking/types"
+        "github.com/harmony-one/harmony/internal/params"
         staking "github.com/harmony-one/harmony/staking"
+        stakingTypes "github.com/harmony-one/harmony/staking/types"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -3259,7 +3259,7 @@ type ChainContext interface {
         // Config returns chain config
         Config() *params.ChainConfig
 
-        ShardID() uint32        // this is implemented by blockchain.go already
+        ShardID() uint32 // this is implemented by blockchain.go already
 }
 
 // NewEVMContext creates a new context for use in the EVM.
@@ -3277,25 +3277,25 @@ func NewEVMContext(msg Message, header *block.Header, chain ChainContext, author
                 copy(vrf[:], vrfAndProof[:32])
         }</span>
         <span class="cov8" title="1">return vm.Context{
-                CanTransfer:                         CanTransfer,
-                Transfer:                            Transfer,
-                IsValidator:                         IsValidator,
-                GetHash:                             GetHashFn(header, chain),
-                GetVRF:                              GetVRFFn(header, chain),
-                CreateValidator:         CreateValidatorFn(header, chain),
-                EditValidator:                 EditValidatorFn(header, chain),
-                Delegate:                                 DelegateFn(header, chain),
-                Undelegate:                         UndelegateFn(header, chain),
-                CollectRewards:         CollectRewardsFn(header, chain),
-                Origin:                              msg.From(),
-                Coinbase:                            beneficiary,
-                BlockNumber:                         header.Number(),
-                EpochNumber:                         header.Epoch(),
-                VRF:                                 vrf,
-                Time:                                header.Time(),
-                GasLimit:                            header.GasLimit(),
-                GasPrice:                            new(big.Int).Set(msg.GasPrice()),
-                ShardID:                                        chain.ShardID(),
+                CanTransfer:     CanTransfer,
+                Transfer:        Transfer,
+                IsValidator:     IsValidator,
+                GetHash:         GetHashFn(header, chain),
+                GetVRF:          GetVRFFn(header, chain),
+                CreateValidator: CreateValidatorFn(header, chain),
+                EditValidator:   EditValidatorFn(header, chain),
+                Delegate:        DelegateFn(header, chain),
+                Undelegate:      UndelegateFn(header, chain),
+                CollectRewards:  CollectRewardsFn(header, chain),
+                Origin:          msg.From(),
+                Coinbase:        beneficiary,
+                BlockNumber:     header.Number(),
+                EpochNumber:     header.Epoch(),
+                VRF:             vrf,
+                Time:            header.Time(),
+                GasLimit:        header.GasLimit(),
+                GasPrice:        new(big.Int).Set(msg.GasPrice()),
+                ShardID:         chain.ShardID(),
         }</span>
 }
 
@@ -3525,6 +3525,7 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int, 
 import (
         "bytes"
         "math/big"
+
         "github.com/harmony-one/harmony/staking/availability"
 
         "github.com/harmony-one/harmony/internal/params"
@@ -3550,42 +3551,42 @@ var (
 
 func checkDuplicateFields(
         bc ChainContext, state vm.StateDB,
-        validator common.Address, identity string, blsKeys []bls.SerializedPublicKey,
-) error <span class="cov8" title="1">{
-        addrs, err := bc.ReadValidatorList()
-        if err != nil </span><span class="cov8" title="1">{
-                return err
-        }</span>
+        validat<span class="cov8" title="1">or common.Address, identity string, blsKeys []bls.SerializedPublicKey,
+) error {
+        addrs, err := </span><span class="cov8" title="1">bc.ReadValidatorList()
+        if err != nil {
+                </span>return err
+        }
 
-        <span class="cov8" title="1">checkIdentity := identity != ""
+        checkIdentity := identity != ""
         checkBlsKeys := len(blsKeys) != 0
 
-        blsKeyMap := map[bls.SerializedPublicKey]struct{}{}
-        for _, key := range blsKeys </span><span class="cov8" title="1">{
-                blsKeyMap[key] = struct{}{}
-        }</span>
+        blsKeyMap := map[bls.Seriali</span><span class="cov8" title="1">zedPublicKey]struct{}{}
+        for _, key := range blsKeys {
+                </span>blsKeyMap[key] = struct{}{}
+        }
 
-        <span class="cov8" title="1">for _, addr := range addrs </span><span class="cov8" title="1">{
-                if !bytes.Equal(validator.Bytes(), addr.Bytes()) </span><span class="cov8" title="1">{
+</span>        for _, addr := range addrs {
+</span>                if !bytes.Equal(validator.Bytes(), addr.Bytes()) {
                         wrapper, err := state.ValidatorWrapperCopy(addr)
 
-                        if err != nil </span><span class="cov8" title="1">{
-                                return err
-                        }</span>
+</span>                        if err != nil {
+                                </span>return err
+                        }
 
-                        <span class="cov8" title="1">if checkIdentity &amp;&amp; wrapper.Identity == identity </span><span class="cov8" title="1">{
-                                return errors.Wrapf(errDupIdentity, "duplicate identity %s", identity)
-                        }</span>
-                        <span class="cov8" title="1">if checkBlsKeys </span><span class="cov8" title="1">{
-                                for _, existingKey := range wrapper.SlotPubKeys </span><span class="cov8" title="1">{
-                                        if _, ok := blsKeyMap[existingKey]; ok </span><span class="cov8" title="1">{
-                                                return errors.Wrapf(errDupBlsKey, "duplicate bls key %x", existingKey)
-                                        }</span>
+</span>                        if checkIdentity &amp;&amp; wrapper.Identity == identity {
+                                </span>return errors.Wrapf(errDupIdentity, "duplicate identity %s", identity)
+                        <span class="cov8" title="1">}
+</span>                        if checkBlsKeys {
+</span>                                for _, existingKey := range wrapper.Slot</span><span class="cov8" title="1">PubKeys {
+                                        if _, ok := blsKeyMap[existingKey]; ok {
+                                                </span>return errors.Wrapf(errDupBlsKey, "duplicate bls key %x", existingKey)
+                                        }
                                 }
                         }
                 }
-        }
-        <span class="cov8" title="1">return nil</span>
+        <span class="cov8" title="1">}
+</span>        return nil
 }
 
 // TODO: add unit tests to check staking msg verification
@@ -3596,43 +3597,43 @@ func checkDuplicateFields(
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
 func VerifyAndCreateValidatorFromMsg(
-        stateDB vm.StateDB, chainContext ChainContext, epoch *big.Int, blockNum *big.Int, msg *staking.CreateValidator,
-) (*staking.ValidatorWrapper, error) <span class="cov8" title="1">{
-        if stateDB == nil </span><span class="cov8" title="1">{
-                return nil, errStateDBIsMissing
-        }</span>
-        <span class="cov8" title="1">if chainContext == nil </span><span class="cov8" title="1">{
-                return nil, errChainContextMissing
-        }</span>
-        <span class="cov8" title="1">if epoch == nil </span><span class="cov8" title="1">{
-                return nil, errEpochMissing
-        }</span>
-        <span class="cov8" title="1">if blockNum == nil </span><span class="cov8" title="1">{
-                return nil, errBlockNumMissing
-        }</span>
-        <span class="cov8" title="1">if msg.Amount.Sign() == -1 </span><span class="cov8" title="1">{
-                return nil, errNegativeAmount
-        }</span>
-        <span class="cov8" title="1">if stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
+        stateDB vm.StateDB, chainContext Cha<span class="cov8" title="1">inContext, epoch *big.Int, blockNum *big.Int, msg *staking.CreateValidator,
+) (*staking.Validat</span><span class="cov8" title="1">orWrapper, error) {
+        if stateDB == nil {
+                </span>return nil, errStateDBIsMissing
+        <span class="cov8" title="1">}
+</span>        if chainContext == nil {
+                </span>return nil, errChainContextMissing
+        <span class="cov8" title="1">}
+</span>        if epoch == nil {
+                </span>return nil, errEpochMissing
+        <span class="cov8" title="1">}
+</span>        if blockNum == nil {
+                </span>return nil, errBlockNumMissing
+        <span class="cov8" title="1">}
+</span>        if msg.Amount.Sign() == -1 {
+                </span>return nil, errNegativeAmount
+        <span class="cov8" title="1">}
+</span>        if stateDB.IsValidator(msg.ValidatorAddress) {
                 return nil, errors.Wrapf(
                         errValidatorExist, common2.MustAddressToBech32(msg.ValidatorAddress),
-                )
-        }</span>
-        <span class="cov8" title="1">if err := checkDuplicateFields(
+                </span>)
+        <span class="cov8" title="1">}
+        if err := checkDuplicateFields(
                 chainContext, stateDB,
                 msg.ValidatorAddress,
                 msg.Identity,
-                msg.SlotPubKeys); err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">if !CanTransfer(stateDB, msg.ValidatorAddress, msg.Amount) </span><span class="cov8" title="1">{
-                return nil, errInsufficientBalanceForStake
-        }</span>
-        <span class="cov8" title="1">v, err := staking.CreateValidatorFromNewMsg(msg, blockNum, epoch)
-        if err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">wrapper := &amp;staking.ValidatorWrapper{}
+</span>                msg.SlotPubKeys); err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+</span>        if !CanTransfer(stateDB, msg.ValidatorAddress, msg.Amount) {
+                </span>return nil, errInsufficientBalanceForStake
+        <span class="cov8" title="1">}
+        v, err := stak</span><span class="cov8" title="1">ing.CreateValidatorFromNewMsg(msg, blockNum, epoch)
+        if err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+        wrapper := &amp;staking.ValidatorWrapper{}
         wrapper.Validator = *v
         wrapper.Delegations = []staking.Delegation{
                 staking.NewDelegation(v.Address, msg.Amount),
@@ -3643,11 +3644,11 @@ func VerifyAndCreateValidatorFromMsg(
         // if there is a contract at this address, its code should be retained
         // so far there has been no writing to this address, so the code is available
         // via a simple call
-        wrapper.ContractCode = stateDB.GetCode(msg.ValidatorAddress)
-        if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">return wrapper, nil</span>
+        wrapper.ContractCode = stateDB.GetCode(msg.V</span><span class="cov8" title="1">alidatorAddress)
+        if err := wrapper.SanityCheck(); err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+</span>        return wrapper, nil
 }
 
 // VerifyAndEditValidatorFromMsg verifies the edit validator message using
@@ -3656,71 +3657,71 @@ func VerifyAndCreateValidatorFromMsg(
 // Note that this function never updates the stateDB, it only reads from stateDB.
 func VerifyAndEditValidatorFromMsg(
         stateDB vm.StateDB, chainContext ChainContext,
-        epoch, blockNum *big.Int, msg *staking.EditValidator,
-) (*staking.ValidatorWrapper, error) <span class="cov8" title="1">{
-        if stateDB == nil </span><span class="cov8" title="1">{
-                return nil, errStateDBIsMissing
-        }</span>
-        <span class="cov8" title="1">if chainContext == nil </span><span class="cov8" title="1">{
-                return nil, errChainContextMissing
-        }</span>
-        <span class="cov8" title="1">if blockNum == nil </span><span class="cov8" title="1">{
-                return nil, errBlockNumMissing
-        }</span>
-        <span class="cov8" title="1">if !stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
-                return nil, errValidatorNotExist
-        }</span>
-        <span class="cov8" title="1">newBlsKeys := []bls.SerializedPublicKey{}
-        if msg.SlotKeyToAdd != nil </span><span class="cov8" title="1">{
-                newBlsKeys = append(newBlsKeys, *msg.SlotKeyToAdd)
-        }</span>
-        <span class="cov8" title="1">if err := checkDuplicateFields(
+        epoch, blockNum *big.Int, msg *staki<span class="cov8" title="1">ng.EditValidator,
+) (*staking.Validat</span><span class="cov8" title="1">orWrapper, error) {
+        if stateDB == nil {
+                </span>return nil, errStateDBIsMissing
+        <span class="cov8" title="1">}
+</span>        if chainContext == nil {
+                </span>return nil, errChainContextMissing
+        <span class="cov8" title="1">}
+</span>        if blockNum == nil {
+                </span>return nil, errBlockNumMissing
+        <span class="cov8" title="1">}
+</span>        if !stateDB.IsValidator(msg.ValidatorAddress) {
+                </span>return nil, errValidatorNotExist
+        <span class="cov8" title="1">}
+        newBlsKeys := []bls.Seriali</span><span class="cov8" title="1">zedPublicKey{}
+        if msg.SlotKeyToAdd != nil {
+                </span>newBlsKeys = append(newBlsKeys, *msg.SlotKeyToAdd)
+        <span class="cov8" title="1">}
+        if err := checkDuplicateFields(
                 chainContext, stateDB,
                 msg.ValidatorAddress,
                 msg.Identity,
-                newBlsKeys); err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">wrapper, err := stateDB.ValidatorWrapperCopy(msg.ValidatorAddress)
-        if err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">if err := staking.UpdateValidatorFromEditMsg(&amp;wrapper.Validator, msg, epoch); err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">newRate := wrapper.Validator.Rate
-        if newRate.GT(wrapper.Validator.MaxRate) </span><span class="cov8" title="1">{
-                return nil, errCommissionRateChangeTooHigh
-        }</span>
-
-        <span class="cov8" title="1">if chainContext.Config().IsMinCommissionRate(epoch) &amp;&amp; newRate.LT(availability.MinCommissionRate) </span><span class="cov8" title="1">{
-                firstEpoch := stateDB.GetValidatorFirstElectionEpoch(msg.ValidatorAddress)
-                promoPeriod := chainContext.Config().MinCommissionPromoPeriod.Int64()
-                if firstEpoch.Uint64() != 0 &amp;&amp; big.NewInt(0).Sub(epoch, firstEpoch).Int64() &gt;= promoPeriod </span><span class="cov8" title="1">{
-                        return nil, errCommissionRateChangeTooLow
-                }</span>
+</span>                newBlsKeys); err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+        wrapper, err :</span><span class="cov8" title="1">= stateDB.ValidatorWrapperCopy(msg.ValidatorAddress)
+        if err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+</span>        if err := staking.UpdateValidatorFromEditMsg(&amp;wrapper.Validator, msg, epoch); err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+        newRate := wrapper.Validator.Rate
+</span>        if newRate.GT(wrapper.Validator.MaxRate) {
+                </span>return nil, errCommissionRateChangeTooHigh
         }
 
-        <span class="cov8" title="1">snapshotValidator, err := chainContext.ReadValidatorSnapshot(wrapper.Address)
-        if err != nil </span><span class="cov8" title="1">{
-                return nil, errors.WithMessage(err, "validator snapshot not found.")
-        }</span>
-        <span class="cov8" title="1">rateAtBeginningOfEpoch := snapshotValidator.Validator.Rate
+</span>        if chainContext.Config().IsMinCommissionRate(epoch) &amp;&amp; newRate.LT(availability.MinCommissionRate) {
+                firstEpoch := stateDB.GetValidatorFirstElectionEpoch(msg.ValidatorAddress)
+                promoPeriod := chainContext.Config().MinCommissionPromoPeriod.Int64()
+</span>                if firstEpoch.Uint64() != 0 &amp;&amp; big.NewInt(0).Sub(epoch, firstEpoch).Int64() &gt;= promoPeriod {
+                        </span>return nil, errCommissionRateChangeTooLow
+                }
+        }
+
+        snapshotValida</span><span class="cov8" title="1">tor, err := chainContext.ReadValidatorSnapshot(wrapper.Address)
+        if err != nil {
+                </span>return nil, errors.WithMessage(err, "validator snapshot not found.")
+        <span class="cov8" title="1">}
+        rateAtBeginningOfEpoch := snapshotValidator.Validator.Rate
 
         if rateAtBeginningOfEpoch.IsNil() ||
-                (!newRate.IsNil() &amp;&amp; !rateAtBeginningOfEpoch.Equal(newRate)) </span><span class="cov8" title="1">{
-                wrapper.Validator.UpdateHeight = blockNum
-        }</span>
+</span>                (!newRate.IsNil() &amp;&amp; !rateAtBeginningOfEpoch.Equal(newRate)) {
+                </span>wrapper.Validator.UpdateHeight = blockNum
+        }
 
-        <span class="cov8" title="1">if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(
-                wrapper.Validator.MaxChangeRate,
-        ) </span><span class="cov8" title="1">{
-                return nil, errCommissionRateChangeTooFast
-        }</span>
-        <span class="cov8" title="1">if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
-        <span class="cov8" title="1">return wrapper, nil</span>
+        if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(
+                w</span><span class="cov8" title="1">rapper.Validator.MaxChangeRate,
+        ) {
+                </span>return nil, errCommissionRateChangeTooFast
+        <span class="cov8" title="1">}
+</span>        if err := wrapper.SanityCheck(); err != nil {
+                </span>return nil, err
+        <span class="cov8" title="1">}
+</span>        return wrapper, nil
 }
 
 const oneThousand = 1000
@@ -3740,133 +3741,133 @@ var (
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
 func VerifyAndDelegateFromMsg(
-        stateDB vm.StateDB, epoch *big.Int, msg *staking.Delegate, delegations []staking.DelegationIndex, chainConfig *params.ChainConfig,
-) ([]*staking.ValidatorWrapper, *big.Int, map[common.Address]*big.Int, error) <span class="cov8" title="1">{
-        if stateDB == nil </span><span class="cov8" title="1">{
-                return nil, nil, nil, errStateDBIsMissing
-        }</span>
-        <span class="cov8" title="1">if !stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
-                return nil, nil, nil, errValidatorNotExist
-        }</span>
-        <span class="cov8" title="1">if msg.Amount.Sign() == -1 </span><span class="cov8" title="1">{
-                return nil, nil, nil, errNegativeAmount
-        }</span>
-        <span class="cov8" title="1">if msg.Amount.Cmp(minimumDelegation) &lt; 0 </span><span class="cov8" title="1">{
-                if chainConfig.IsMinDelegation100(epoch) </span><span class="cov8" title="1">{
-                        if msg.Amount.Cmp(minimumDelegationV2) &lt; 0 </span><span class="cov8" title="1">{
-                                return nil, nil, nil, errDelegationTooSmallV2
-                        }</span>
-                } else<span class="cov8" title="1"> {
-                        return nil, nil, nil, errDelegationTooSmall
-                }</span>
+        stateDB vm.StateDB, epoch *big.Int, msg *staking.Delegate, delegations []stak<span class="cov8" title="1">ing.DelegationIndex, chainConfig *params.ChainConfig,
+) ([]*staking.Valid</span><span class="cov8" title="1">atorWrapper, *big.Int, map[common.Address]*big.Int, error) {
+        if stateDB == nil {
+                </span>return nil, nil, nil, errStateDBIsMissing
+        <span class="cov8" title="1">}
+</span>        if !stateDB.IsValidator(msg.ValidatorAddress) {
+                </span>return nil, nil, nil, errValidatorNotExist
+        <span class="cov8" title="1">}
+</span>        if msg.Amount.Sign() == -1 {
+                </span>return nil, nil, nil, errNegativeAmount
+        <span class="cov8" title="1">}
+</span>        if msg.Amount.Cmp(minimumDelegation) &lt; 0 {</span><span class="cov8" title="1">
+                if chainConfig.IsMinDelegation100(epoch) {
+</span>                        if msg.Amount.Cmp(minimumDelegationV2) &lt; 0 {
+                                </span>return nil, nil, nil, errDelegationTooSmallV2
+                        }
+                } else {
+                        </span>return nil, nil, nil, errDelegationTooSmall
+                }
         }
 
-        <span class="cov8" title="1">updatedValidatorWrappers := []*staking.ValidatorWrapper{}
+        updatedValidatorWrappers := []*staking.ValidatorWrapper{}
         delegateBalance := big.NewInt(0).Set(msg.Amount)
         fromLockedTokens := map[common.Address]*big.Int{}
 
-        var delegateeWrapper *staking.ValidatorWrapper
-        if chainConfig.IsRedelegation(epoch) </span><span class="cov8" title="1">{
-                // Check if we can use tokens in undelegation to delegate (redelegate)
-                for i := range delegations </span><span class="cov8" title="1">{
+        var delegateeWrapper *staking.Validat</span><span class="cov8" title="1">orWrapper
+        if chainConfig.IsRedelegation(epoch) {
+                // Check if we can use toke</span><span class="cov8" title="1">ns in undelegation to delegate (redelegate)
+                for i := range delegations {
                         delegationIndex := &amp;delegations[i]
-                        wrapper, err := stateDB.ValidatorWrapperCopy(delegationIndex.ValidatorAddress)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, nil, nil, err
-                        }</span>
-                        <span class="cov8" title="1">if uint64(len(wrapper.Delegations)) &lt;= delegationIndex.Index </span><span class="cov8" title="1">{
+                        wrapper, err :</span><span class="cov0" title="0">= stateDB.ValidatorWrapperCopy(delegationIndex.ValidatorAddress)
+                        if err != nil {
+                                </span>return nil, nil, nil, err
+                        <span class="cov8" title="1">}
+</span>                        if uint64(len(wrapper.Delegations)) &lt;= delegationIndex.Index {
                                 utils.Logger().Warn().
                                         Str("validator", delegationIndex.ValidatorAddress.String()).
                                         Uint64("delegation index", delegationIndex.Index).
                                         Int("delegations length", len(wrapper.Delegations)).
                                         Msg("Delegation index out of bound")
-                                return nil, nil, nil, errors.New("Delegation index out of bound")
-                        }</span>
+                                </span>return nil, nil, nil, errors.New("Delegation index out of bound")
+                        }
 
-                        <span class="cov8" title="1">delegation := &amp;wrapper.Delegations[delegationIndex.Index]
+                        delegation := &amp;wrapper.Delegations[delegationIndex.Index]
 
                         startBalance := big.NewInt(0).Set(delegateBalance)
                         // Start from the oldest undelegated tokens
                         curIndex := 0
-                        for ; curIndex &lt; len(delegation.Undelegations); curIndex++ </span><span class="cov8" title="1">{
-                                if delegation.Undelegations[curIndex].Epoch.Cmp(epoch) &gt;= 0 </span><span class="cov8" title="1">{
-                                        break</span>
-                                }
-                                <span class="cov8" title="1">if delegation.Undelegations[curIndex].Amount.Cmp(delegateBalance) &lt;= 0 </span><span class="cov8" title="1">{
-                                        delegateBalance.Sub(delegateBalance, delegation.Undelegations[curIndex].Amount)
-                                }</span> else<span class="cov8" title="1"> {
+</span>                        for ; curIndex &lt; len(delegation.Undelegations); curIndex++ {
+</span>                                if del</span>egation.Undelegations[curIndex].Epoch.Cmp(epoch) &gt;= 0 {
+                                        break
+                                <span class="cov8" title="1">}
+</span>                                if delegation.Undelegations[curIndex].Amount.Cmp(delegateBalance) &lt;= 0 {
+                                        </span>deleg<span class="cov8" title="1">ateBalance.Sub(delegateBalance, delegation.Undelegations[curIndex].Amount)
+                                } else {
                                         delegation.Undelegations[curIndex].Amount.Sub(
                                                 delegation.Undelegations[curIndex].Amount, delegateBalance,
                                         )
-                                        delegateBalance = big.NewInt(0)
-                                        break</span>
+                                        deleg</span>ateBalance = big.NewInt(0)
+                                        break
                                 }
                         }
 
-                        <span class="cov8" title="1">if startBalance.Cmp(delegateBalance) &gt; 0 </span><span class="cov8" title="1">{
+</span>                        if startBalance.Cmp(delegateBalance) &gt; 0 {
                                 // Used undelegated token for redelegation
-                                delegation.Undelegations = delegation.Undelegations[curIndex:]
-                                if err := wrapper.SanityCheck(); err != nil </span><span class="cov0" title="0">{
-                                        return nil, nil, nil, err
-                                }</span>
+                                delegation.Undelegations = delegation.Undele</span><span class="cov0" title="0">gations[curIndex:]
+                                if err := wrapper.SanityCheck(); err != nil {
+                                        </span>return nil, nil, nil, err
+                                }
 
-                                <span class="cov8" title="1">if bytes.Equal(delegationIndex.ValidatorAddress[:], msg.ValidatorAddress[:]) </span><span class="cov8" title="1">{
-                                        delegateeWrapper = wrapper
-                                }</span>
-                                <span class="cov8" title="1">updatedValidatorWrappers = append(updatedValidatorWrappers, wrapper)
-                                fromLockedTokens[delegationIndex.ValidatorAddress] = big.NewInt(0).Sub(startBalance, delegateBalance)</span>
+</span>                                if bytes.Equal(delegationIndex.ValidatorAddress[:], msg.ValidatorAddress[:]) {
+                                        </span>delegateeWrapper = wrapper
+                                <span class="cov8" title="1">}
+                                updatedValidatorWrappers = append(updatedValidatorWrappers, wrapper)
+</span>                                fromLockedTokens[delegationIndex.ValidatorAddress] = big.NewInt(0).Sub(startBalance, delegateBalance)
                         }
                 }
         }
 
-        <span class="cov8" title="1">if delegateeWrapper == nil </span><span class="cov8" title="1">{
+</span>        if delegateeWrapper == nil {
                 var err error
-                delegateeWrapper, err = stateDB.ValidatorWrapperCopy(msg.ValidatorAddress)
-                if err != nil </span><span class="cov8" title="1">{
-                        return nil, nil, nil, err
-                }</span>
-                <span class="cov8" title="1">updatedValidatorWrappers = append(updatedValidatorWrappers, delegateeWrapper)</span>
+                delegateeWrapp</span><span class="cov8" title="1">er, err = stateDB.ValidatorWrapperCopy(msg.ValidatorAddress)
+                if err != nil {
+                        </span>return nil, nil, nil, err
+                <span class="cov8" title="1">}
+</span>                updatedValidatorWrappers = append(updatedValidatorWrappers, delegateeWrapper)
         }
 
-        // Add to existing delegation if any
-        <span class="cov8" title="1">found := false
-        for i := range delegateeWrapper.Delegations </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">// Add to existing delegation if any
+        found := false
+</span>        for i := range delegateeWrapper.Delegations {
                 delegation := &amp;delegateeWrapper.Delegations[i]
-                if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.DelegatorAddress.Bytes()) </span><span class="cov8" title="1">{
+</span>                if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.DelegatorAddress.Bytes()) {
                         delegation.Amount.Add(delegation.Amount, msg.Amount)
-                        if err := delegateeWrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
-                                return nil, nil, nil, err
-                        }</span>
-                        <span class="cov8" title="1">found = true</span>
+</span>                        if err := delegateeWrapper.SanityCheck(); err != nil {
+                                </span>return nil, nil, nil, err
+                        <span class="cov8" title="1">}
+</span>                        found = true
                 }
         }
 
-        <span class="cov8" title="1">if !found </span><span class="cov8" title="1">{
+</span>        if !found {
                 // Add new delegation
                 delegateeWrapper.Delegations = append(
                         delegateeWrapper.Delegations, staking.NewDelegation(
                                 msg.DelegatorAddress, msg.Amount,
                         ),
                 )
-                if err := delegateeWrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
-                        return nil, nil, nil, err
-                }</span>
+</span>                if err := delegateeWrapper.SanityCheck(); err != nil {
+                        </span>return nil, nil, nil, err
+                }
         }
 
-        <span class="cov8" title="1">if delegateBalance.Cmp(big.NewInt(0)) == 0 </span><span class="cov8" title="1">{
+</span>        if delegateBalance.Cmp(big.NewInt(0)) == 0 {
                 // delegation fully from undelegated tokens, no need to deduct from balance.
-                return updatedValidatorWrappers, big.NewInt(0), fromLockedTokens, nil
-        }</span>
+                </span>return updatedValidatorWrappers, big.NewInt(0), fromLockedTokens, nil
+        }
 
         // Still need to deduct tokens from balance for delegation
-        // Check if there is enough liquid token to delegate
-        <span class="cov8" title="1">if !CanTransfer(stateDB, msg.DelegatorAddress, delegateBalance) </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">// Check if there is enough liquid token to delegate
+</span>        if !CanTransfer(stateDB, msg.DelegatorAddress, delegateBalance) {
                 return nil, nil, nil, errors.Wrapf(
                         errInsufficientBalanceForStake, "totalRedelegatable: %v, balance: %v; trying to stake %v",
-                        big.NewInt(0).Sub(msg.Amount, delegateBalance), stateDB.GetBalance(msg.DelegatorAddress), msg.Amount)
-        }</span>
+                </span>        big.NewInt(0).Sub(msg.Amount, delegateBalance), stateDB.GetBalance(msg.DelegatorAddress), msg.Amount)
+        }
 
-        <span class="cov8" title="1">return updatedValidatorWrappers, delegateBalance, fromLockedTokens, nil</span>
+</span>        return updatedValidatorWrappers, delegateBalance, fromLockedTokens, nil
 }
 
 // VerifyAndUndelegateFromMsg verifies the undelegate validator message
@@ -3875,47 +3876,47 @@ func VerifyAndDelegateFromMsg(
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
 func VerifyAndUndelegateFromMsg(
-        stateDB vm.StateDB, epoch *big.Int, msg *staking.Undelegate,
-) (*staking.ValidatorWrapper, error) <span class="cov8" title="1">{
-        if stateDB == nil </span><span class="cov8" title="1">{
-                return nil, errStateDBIsMissing
-        }</span>
-        <span class="cov8" title="1">if epoch == nil </span><span class="cov8" title="1">{
-                return nil, errEpochMissing
-        }</span>
+        stateDB vm.StateDB, epoch *big.Int, <span class="cov8" title="1">msg *staking.Undelegate,
+) (*staking.Validat</span><span class="cov8" title="1">orWrapper, error) {
+        if stateDB == nil {
+                </span>return nil, errStateDBIsMissing
+        <span class="cov8" title="1">}
+</span>        if epoch == nil {
+                </span>return nil, errEpochMissing
+        }
 
-        <span class="cov8" title="1">if msg.Amount.Sign() == -1 </span><span class="cov8" title="1">{
-                return nil, errNegativeAmount
-        }</span>
+</span>        if msg.Amount.Sign() == -1 {
+                </span>return nil, errNegativeAmount
+        }
 
-        <span class="cov8" title="1">if !stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
-                return nil, errValidatorNotExist
-        }</span>
+</span>        if !stateDB.IsValidator(msg.ValidatorAddress) {
+                </span>return nil, errValidatorNotExist
+        }
 
-        <span class="cov8" title="1">wrapper, err := stateDB.ValidatorWrapperCopy(msg.ValidatorAddress)
-        if err != nil </span><span class="cov8" title="1">{
-                return nil, err
-        }</span>
+        wrapper, err :</span><span class="cov8" title="1">= stateDB.ValidatorWrapperCopy(msg.ValidatorAddress)
+        if err != nil {
+                </span>return nil, err
+        }
 
-        <span class="cov8" title="1">for i := range wrapper.Delegations </span><span class="cov8" title="1">{
+</span>        for i := range wrapper.Delegations {
                 delegation := &amp;wrapper.Delegations[i]
-                if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.DelegatorAddress.Bytes()) </span><span class="cov8" title="1">{
-                        if err := delegation.Undelegate(epoch, msg.Amount); err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+</span>                if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.Delegato</span><span class="cov8" title="1">rAddress.Bytes()) {
+                        if err := delegation.Undelegate(epoch, msg.Amount); err != nil {
+                                </span>return nil, err
+                        <span class="cov8" title="1">}
+</span>                        if err := wrapper.SanityCheck(); err != nil {
                                 // allow self delegation to go below min self delegation
                                 // but set the status to inactive
-                                if errors.Cause(err) == staking.ErrInvalidSelfDelegation </span><span class="cov8" title="1">{
-                                        wrapper.Status = effective.Inactive
-                                }</span> else<span class="cov0" title="0"> {
-                                        return nil, err
-                                }</span>
-                        }
-                        <span class="cov8" title="1">return wrapper, nil</span>
+</span>                                if errors.Cause(err) == staking.ErrInvalidSelfDelegation {
+                                        </span>wrapp<span class="cov0" title="0">er.Status = effective.Inactive
+                                } else {
+                                        </span>return nil, err
+                                }
+                        <span class="cov8" title="1">}
+</span>                        return wrapper, nil
                 }
-        }
-        <span class="cov8" title="1">return nil, errNoDelegationToUndelegate</span>
+        <span class="cov8" title="1">}
+</span>        return nil, errNoDelegationToUndelegate
 }
 
 // VerifyAndCollectRewardsFromDelegation verifies and collects rewards
@@ -3924,39 +3925,39 @@ func VerifyAndUndelegateFromMsg(
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
 func VerifyAndCollectRewardsFromDelegation(
-        stateDB vm.StateDB, delegations []staking.DelegationIndex,
-) ([]*staking.ValidatorWrapper, *big.Int, error) <span class="cov8" title="1">{
-        if stateDB == nil </span><span class="cov8" title="1">{
-                return nil, nil, errStateDBIsMissing
-        }</span>
-        <span class="cov8" title="1">updatedValidatorWrappers := []*staking.ValidatorWrapper{}
-        totalRewards := big.NewInt(0)
-        for i := range delegations </span><span class="cov8" title="1">{
+        stateDB vm.StateDB, delegations []staking.Delega<span class="cov8" title="1">tionIndex,
+) ([]*staking.Valid</span><span class="cov8" title="1">atorWrapper, *big.Int, error) {
+        if stateDB == nil {
+                </span>return nil, nil, errStateDBIsMissing
+        <span class="cov8" title="1">}
+        updatedValidatorWrappers := []*staking.ValidatorWrapper{}
+        totalRewards := big.NewInt(</span><span class="cov8" title="1">0)
+        for i := range delegations {
                 delegation := &amp;delegations[i]
-                wrapper, err := stateDB.ValidatorWrapperCopy(delegation.ValidatorAddress)
-                if err != nil </span><span class="cov8" title="1">{
-                        return nil, nil, err
-                }</span>
-                <span class="cov8" title="1">if uint64(len(wrapper.Delegations)) &gt; delegation.Index </span><span class="cov8" title="1">{
-                        delegation := &amp;wrapper.Delegations[delegation.Index]
-                        if delegation.Reward.Cmp(common.Big0) &gt; 0 </span><span class="cov8" title="1">{
+                wrapper, err :</span><span class="cov8" title="1">= stateDB.ValidatorWrapperCopy(delegation.ValidatorAddress)
+                if err != nil {
+                        </span>return nil, nil, err
+                <span class="cov8" title="1">}
+</span>                if uint64(len(wrapper.Delegations)) &gt; delegation.Index {
+                        delegation := &amp;wrapper.Delegations[delegat</span><span class="cov8" title="1">ion.Index]
+                        if delegation.Reward.Cmp(common.Big0) &gt; 0 {
                                 totalRewards.Add(totalRewards, delegation.Reward)
-                                delegation.Reward.SetUint64(0)
-                        }</span>
-                } else<span class="cov8" title="1"> {
+                                </span>delegation.Reward.SetUint64(0)
+                        }
+                } else {
                         utils.Logger().Warn().
                                 Str("validator", delegation.ValidatorAddress.String()).
                                 Uint64("delegation index", delegation.Index).
                                 Int("delegations length", len(wrapper.Delegations)).
                                 Msg("Delegation index out of bound")
-                        return nil, nil, errors.New("Delegation index out of bound")
-                }</span>
-                <span class="cov8" title="1">updatedValidatorWrappers = append(updatedValidatorWrappers, wrapper)</span>
-        }
-        <span class="cov8" title="1">if totalRewards.Int64() == 0 </span><span class="cov8" title="1">{
-                return nil, nil, errNoRewardsToCollect
-        }</span>
-        <span class="cov8" title="1">return updatedValidatorWrappers, totalRewards, nil</span>
+                        </span>return nil, nil, errors.New("Delegation index out of bound")
+                <span class="cov8" title="1">}
+</span>                updatedValidatorWrappers = append(updatedValidatorWrappers, wrapper)
+        <span class="cov8" title="1">}
+</span>        if totalRewards.Int64() == 0 {
+                </span>return nil, nil, errNoRewardsToCollect
+        <span class="cov8" title="1">}
+</span>        return updatedValidatorWrappers, totalRewards, nil
 }
 </pre>
 		
@@ -4717,249 +4718,259 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) <sp
 
 import (
         "errors"
+
         "github.com/ethereum/go-ethereum/common"
-        stakingTypes "github.com/harmony-one/harmony/staking/types"
+        "github.com/harmony-one/harmony/shard"
         staking "github.com/harmony-one/harmony/staking"
+        stakingTypes "github.com/harmony-one/harmony/staking/types"
 )
 
-var WriteCapablePrecompiledContracts = map[common.Address]WriteCapablePrecompiledContract{
+var WriteCapablePrecompiledContractsStaking = map[common.Address]WriteCapablePrecompiledContract{
         common.BytesToAddress([]byte{252}): &amp;stakingPrecompile{},
 }
 
 // Native Go contracts which are available as a precompile in the EVM
 // These have the capability to alter the state (those in contracts.go do not)
 type WriteCapablePrecompiledContract interface {
-        RequiredGas(evm *EVM, input []byte) (uint64, error) // RequiredPrice calculates the contract gas use
-  // use a different name from read-only contracts to be safe
+        // RequiredGas calculates the contract gas use
+        RequiredGas(evm *EVM, input []byte) (uint64, error)
+        // use a different name from read-only contracts to be safe
         RunWriteCapable(evm *EVM, contract *Contract, input []byte) ([]byte, error)
 }
 
-// RunPrecompiledContract runs and evaluates the output of a precompiled contract.
-func RunWriteCapablePrecompiledContract(p WriteCapablePrecompiledContract, evm *EVM, contract *Contract, input []byte) ([]byte, error) <span class="cov8" title="1">{
+// RunPrecompil</span><span class="cov0" title="0">edContract runs and evaluates the output of a precompiled contract.
+func RunWriteCapablePrecompiledContract(p WriteCapablePrecompiledContract, evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
+        /</span>/ immediately error out if readOnly
+        <span class="cov8" title="1">// do not calculate / con</span><span class="cov0" title="0">sume gas
+        if readOnly {
+                </span>return nil, errWriteProtection
+        <span class="cov8" title="1">}
+</span>        // if gas can be calculated
         gas, err := p.RequiredGas(evm, input)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil {
                 return nil, err
-        }</span>
-        <span class="cov8" title="1">if !contract.UseGas(gas) </span><span class="cov0" title="0">{
+        }
+        // only then consume it
+        if !contract.UseGas(gas) {
                 return nil, ErrOutOfGas
-        }</span>
-        <span class="cov8" title="1">return p.RunWriteCapable(evm, contract, input)</span>
+        }
+        return p.RunWriteCa</span><span class="cov0" title="0">pable(evm, contract, input)
 }
 
-type stakingPrecompile struct{}
+</span>t<span class="cov8" title="1">ype stakingPrecompile struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *stakingPrecompile) RequiredGas(evm *EVM, input []byte) (uint64, error) <span class="cov8" title="1">{
-        if len(input) &lt; 64 </span><span class="cov0" title="0">{
+func (c *stakingPrecompile) RequiredGas(evm *EVM, input []byte) (uint64, error) {
+        if len(input) </span><span class="cov0" title="0">&lt; 36 { // first 32 for size and next 4 for method, at a minimum
                 return 0, errors.New("Input is malformed")
         }</span>
-        <span class="cov8" title="1">homestead := evm.ChainConfig().IsS3(evm.EpochNumber)
-        istanbul := evm.ChainConfig().IsIstanbul(evm.EpochNumber)
-        gas, err := IntrinsicGas(input,
-                                                                                                 false, /* contractCreation */
-                                                                                                 homestead,
-                                                                                                 istanbul,
-                                                                                                 stakingTypes.Directive(getData(input, 63, 64)[0]) == stakingTypes.DirectiveCreateValidator)
-        if err != nil </span><span class="cov0" title="0">{
-                return 0, err
-        }</span>
-        <span class="cov8" title="1">return gas, nil</span>
-}
-
-func (c *stakingPrecompile) RunWriteCapable(evm *EVM, contract *Contract, input []byte) ([]byte, error) <span class="cov8" title="1">{
-        // if evm.Context.ShardID != shard.BeaconChainShardID {
-        //         return nil, nil        // we are not shard 0, so this is not for us
-        // }
-
-        // need at least (1) initial 32 bytes for size, and (2) next 32 bytes for directive
-        if len(input) &lt; 64 </span><span class="cov0" title="0">{
-                return nil, errors.New("Input is malformed")
-        }</span>
-        // discard length of structure (first 32 members of the array)
-        <span class="cov8" title="1">input = input[32:]
-        // directive is a single byte
-  var directive = stakingTypes.Directive(getData(input, 31, 32)[0])
-        // store passed information in map
-        args := map[string]interface{}{}
-        switch directive </span>{
-                case stakingTypes.DirectiveCreateValidator:<span class="cov8" title="1"> </span><span class="cov8" title="1">{
-                        if err := staking.UnpackFromStakingMethod("CreateValidator", args, input); err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        // a contract must not make anyone else a validator
-                        <span class="cov8" title="1">address, err := staking.ValidateContractAddress(contract.Caller(), args, "ValidatorAddress")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">amount, err := staking.ParseBigIntFromKey(args, "Amount")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">description, err := staking.ParseDescription(args)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">commissionRates, err := staking.ParseCommissionRates(args)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">minSelfDelegation, err := staking.ParseBigIntFromKey(args, "MinSelfDelegation")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">maxTotalDelegation, err := staking.ParseBigIntFromKey(args, "MaxTotalDelegation")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">slotPubKeys, err := staking.ParseSlotPubKeys(args)
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">slotKeySigs, err := staking.ParseSlotKeySigs(args)
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">stakeMsg := &amp;stakingTypes.CreateValidator{
-                                ValidatorAddress: address,
-                                Amount: amount,
-                                Description: description,
-                                CommissionRates: commissionRates,
-                                MinSelfDelegation: minSelfDelegation,
-                                MaxTotalDelegation: maxTotalDelegation,
-                                SlotPubKeys: slotPubKeys,
-                                SlotKeySigs: slotKeySigs,
-                        }
-                        if err := evm.CreateValidator(evm.StateDB, stakeMsg); err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span> else<span class="cov8" title="1"> {
-                                evm.StakeMsgs = append(evm.StakeMsgs, stakeMsg)
-                                return nil, nil
-                        }</span>
-                }
-                case stakingTypes.DirectiveEditValidator:<span class="cov8" title="1"> </span><span class="cov8" title="1">{
-                        if err := staking.UnpackFromStakingMethod("EditValidator", args, input); err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">address, err := staking.ValidateContractAddress(contract.Caller(), args, "ValidatorAddress")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">description, err := staking.ParseDescription(args)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">commissionRate, err := staking.ParseCommissionRate(args)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">minSelfDelegation, err := staking.ParseBigIntFromKey(args, "MinSelfDelegation")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">maxTotalDelegation, err := staking.ParseBigIntFromKey(args, "MaxTotalDelegation")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">slotKeyToRemove, err := staking.ParseSlotPubKeyFromKey(args, "SlotKeyToRemove")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">slotKeyToAdd, err := staking.ParseSlotPubKeyFromKey(args, "SlotKeyToAdd")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">slotKeyToAddSig, err := staking.ParseSlotKeySigFromKey(args, "SlotKeyToAddSig")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">stakeMsg := &amp;stakingTypes.EditValidator{
-                                ValidatorAddress: address,
-                                Description: description,
-                                CommissionRate: commissionRate,
-                                MinSelfDelegation: minSelfDelegation,
-                                MaxTotalDelegation: maxTotalDelegation,
-                                SlotKeyToRemove: slotKeyToRemove,
-                                SlotKeyToAdd: slotKeyToAdd,
-                                SlotKeyToAddSig: slotKeyToAddSig,
-                        }
-                        return nil, evm.EditValidator(evm.StateDB, stakeMsg)</span>
-                }
-                case stakingTypes.DirectiveDelegate:<span class="cov8" title="1"> </span><span class="cov8" title="1">{
-                        if err := staking.UnpackFromStakingMethod("DelegateOrUndelegate", args, input); err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        // a contract should only delegate its own balance - nobody else's
-                        <span class="cov8" title="1">address, err := staking.ValidateContractAddress(contract.Caller(), args, "DelegatorAddress")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">validatorAddress, err := staking.ParseAddressFromKey(args, "ValidatorAddress")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">amount, err := staking.ParseBigIntFromKey(args, "Amount")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">stakeMsg := &amp;stakingTypes.Delegate{
-                                DelegatorAddress: address,
-                                ValidatorAddress: validatorAddress,
-                                Amount: amount,
-                        }
-                        if err := evm.Delegate(evm.StateDB, stakeMsg); err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span> else<span class="cov8" title="1"> {
-                                evm.StakeMsgs = append(evm.StakeMsgs, stakeMsg)
-                                return nil, nil
-                        }</span>
-                }
-                case stakingTypes.DirectiveUndelegate:<span class="cov8" title="1"> </span><span class="cov8" title="1">{
-                        if err := staking.UnpackFromStakingMethod("DelegateOrUndelegate", args, input); err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        // a contract should only delegate its own balance - nobody else's
-                        <span class="cov8" title="1">address, err := staking.ValidateContractAddress(contract.Caller(), args, "DelegatorAddress")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">validatorAddress, err := staking.ParseAddressFromKey(args, "ValidatorAddress")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        // this type assertion is needed by Golang
-                        <span class="cov8" title="1">amount, err := staking.ParseBigIntFromKey(args, "Amount")
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">stakeMsg := &amp;stakingTypes.Undelegate{
-                                DelegatorAddress: address,
-                                ValidatorAddress: validatorAddress,
-                                Amount: amount,
-                        }
-                        return nil, evm.Undelegate(evm.StateDB, stakeMsg)</span>
-                }
-                case stakingTypes.DirectiveCollectRewards:<span class="cov8" title="1"> </span><span class="cov8" title="1">{
-                        if err := staking.UnpackFromStakingMethod("CollectRewards", args, input); err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        // a contract should only collect its own rewards - nobody else's
-                        <span class="cov8" title="1">address, err := staking.ValidateContractAddress(contract.Caller(), args, "DelegatorAddress")
-                        if err != nil </span><span class="cov8" title="1">{
-                                return nil, err
-                        }</span>
-                        <span class="cov8" title="1">stakeMsg := &amp;stakingTypes.CollectRewards{
-                                DelegatorAddress: address,
-                        }
-                        return nil, evm.CollectRewards(evm.StateDB, stakeMsg)</span>
-                }
-                default:<span class="cov8" title="1"> </span><span class="cov8" title="1">{
-                        return nil, stakingTypes.ErrInvalidStakingKind
-                }</span>
+        <span class="cov8" title="1">if evm.Context.</span>ShardID != shard.BeaconChainShardID {
+                return 0, errors.New("Staking not supported on this shard")
+                // we are not shard 0, so no processing
+                // but do not fail silently
         }
-  // return nil, nil -&gt; this never reached
+        input = input[32:] // drop the word length
+        method, err := staking.ParseStakingMethod(input)
+        if err != nil {
+                return 0, stakingTypes.ErrInvalidStakingKind
+        }
+</span>        homestead := evm.ChainConfig().IsS3(evm.EpochNumber)
+        i</span>stanbul := evm.ChainConfig().IsIstanbul(evm.EpochNumber)
+        gas, err := IntrinsicGas(input,
+        <span class="cov8" title="1">        false, /* contractCreation */
+                homestead,
+                istanbul,
+                method.Name == "CreateValidator" /* isValidatorCreation */)
+        if err != nil {
+                return 0, err
+</span>        }
+</span>        return gas, nil
+</span>}
+
+</span>func (c *stakingPrecompile) RunWriteCapable(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
+        //<span class="cov8" title="1"> if we are here, we have checked for shard 0,
+        // readOnly and </span><span class="cov8" title="1">length already
+        input = input[32:] // drop the initial start of word information
+        met</span>hod, err := staking.ParseStakingMethod(input)
+        if<span class="cov8" title="1"> err != nil {
+                return nil, sta</span><span class="cov0" title="0">kingTypes.ErrInvalidStakingKind
+        }
+        inp</span>ut = input[4:] // drop the method selector
+        //<span class="cov8" title="1"> store passed information in map
+        args := map[stri</span><span class="cov0" title="0">ng]interface{}{}
+        if err = method.Inputs.UnpackIntoMap(args, input); err != nil {
+                re</span>turn nil, err
+        }
+        switch method.Na</span><span class="cov0" title="0">me {
+        case "CreateValidator":
+                {
+</span>                        <span class="cov8" title="1">// a contract must not make anyone else a validator
+                        address, err :</span><span class="cov0" title="0">= staking.ValidateContractAddress(contract.Caller(), args, "validatorAddress")
+                        if err != nil {
+                                </span>return nil, err
+                        <span class="cov8" title="1">}
+                        amount, err :=</span><span class="cov0" title="0"> staking.ParseBigIntFromKey(args, "amount")
+                        if err != nil {
+                                </span>return nil, err
+                        <span class="cov8" title="1">}
+                        description, e</span><span class="cov8" title="1">rr := staking.ParseDescription(args, "description")
+                        if err != nil {
+                                </span>return nil, err
+                        <span class="cov8" title="1">}
+                        commissionRate</span><span class="cov8" title="1">s, err := staking.ParseCommissionRates(args, "commissionRates")
+                        if err != nil {
+                                </span>return nil, err
+                        <span class="cov8" title="1">}
+                        minSelfDelegation, err := staking.ParseBigIntFromKey(args, "minSelfDelegation")
+                        if err != nil {
+                                return nil, err
+                        }
+                        maxTotalDelegation, err := staking.ParseBigIntFromKey(args, "maxTotalDelegation")
+                        if err != nil {
+                                return nil, err
+                        }
+                        slotPubKeys, err := staking.ParseSlotPubKeys(args, "slotPubKeys")
+                        if err != nil {
+</span>                                return nil, err
+                        }</span>
+                        slotKeySigs, err := staking.ParseSlotKeySigs(args, "slotKeySigs")
+                        if err != nil {
+                                </span>return nil, err
+                        }
+                        stakeMsg := &amp;stakingTypes.CreateValidato<span class="cov8" title="1">r</span><span class="cov8" title="1">{
+                                ValidatorAddress:   address,
+</span>                                Amount:             amount,
+                                </span>Description:        description,
+                        <span class="cov8" title="1">        CommissionRates:    commissionRates,
+                                MinSelfDelega</span><span class="cov8" title="1">tion:  minSelfDelegation,
+                                MaxTotalDelegation: maxTotalDelegation,
+                                </span>SlotPubKeys:        slotPubKeys,
+                        <span class="cov8" title="1">        SlotKeySigs:        slotKeySigs,
+                        }
+</span>                        if err := evm.CreateValidator(evm.StateDB, stakeMsg); err != nil {
+                                </span>return nil, err
+                        <span class="cov8" title="1">} else {
+                                evm.StakeMsgs</span><span class="cov0" title="0"> = append(evm.StakeMsgs, stakeMsg)
+                                return nil, nil
+                        }</span>
+                }<span class="cov8" title="1">
+        case "EditValida</span><span class="cov0" title="0">tor":
+                {
+                        a</span>ddress, err := staking.ValidateContractAddress(contract.Caller(), args, "validatorAddress")
+                        <span class="cov8" title="1">if err != nil {
+                                return nil, e</span><span class="cov0" title="0">rr
+                        }
+                        d</span>escription, err := staking.ParseDescription(args, "description")
+                        <span class="cov8" title="1">if err != nil {
+                                return nil, e</span><span class="cov8" title="1">rr
+                        }
+                        c</span>ommissionRate, err := staking.ParseCommissionRate(args, "commissionRate")
+                        <span class="cov8" title="1">if err != nil {
+                                return nil, e</span><span class="cov0" title="0">rr
+                        }
+                        m</span>inSelfDelegation, err := staking.ParseBigIntFromKey(args, "minSelfDelegation")
+                        <span class="cov8" title="1">if err != nil {
+                                return nil, e</span><span class="cov8" title="1">rr
+                        }
+                        m</span>axTotalDelegation, err := staking.ParseBigIntFromKey(args, "maxTotalDelegation")
+                        <span class="cov8" title="1">if err != nil {
+                                return nil, err
+                        }
+                        slotKeyToRemove, err := staking.ParseSlotPubKeyFromKey(args, "slotKeyToRemove")
+                        if err != nil {
+                                return nil, err
+                        }
+                        slotKeyToAdd, err := staking.ParseSlotPubKeyFromKey(args, "slotKeyToAdd")
+                        if err != nil {
+                                return nil, err
+                        }
+</span>                        slotKeyToAddSig, err := staking.ParseSlotKeySigFromKey(args, "slotKeyToAddSig")
+                        if err != nil {
+</span>                                return nil, err
+</span>                        }
+                        s</span>takeMsg := &amp;stakingTypes.EditValidator{
+                                ValidatorAddress:   address,
+                        <span class="cov8" title="1">        Description:        description,
+                                CommissionRat</span><span class="cov8" title="1">e:     commissionRate,
+                                MinSelfDelegation:  minSelfDelegation,
+                                </span>MaxTotalDelegation: maxTotalDelegation,
+                        <span class="cov8" title="1">        SlotKeyToRemove:    slotKeyToRemove,
+                                SlotKeyToAdd:</span><span class="cov0" title="0">       slotKeyToAdd,
+                                SlotKeyToAddSig:    slotKeyToAddSig,
+                        }</span>
+                        <span class="cov8" title="1">return nil, evm.EditValidator(evm.StateDB, stakeMsg)
+                }
+</span>        case "Delegate":
+                {
+</span>                        <span class="cov8" title="1">// a contract should only delegate its own balance - nobody else's
+                        address, err := staking.ValidateContractAddress(contract.Caller(), args, "delegatorAddress")
+                        if err != nil {
+                                return nil, err
+                        }
+                        validatorAddress, err := staking.ParseAddressFromKey(args,</span><span class="cov0" title="0"> "validatorAddress")
+                        if err != nil {
+                                </span>retur<span class="cov8" title="1">n nil, err
+                        }
+                        amount, err := staking.ParseBigIntFromKey(args, "amount")
+                        i</span>f err != nil {
+                                return nil, err
+                        }
+</span>                        stakeMsg := &amp;stakingTypes.Delegate{
+</span>                                DelegatorAddress: address,
+                                </span>ValidatorAddress: validatorAddress,
+                                Amount:           amount,
+                        <span class="cov8" title="1">}
+                        if err := evm.</span><span class="cov8" title="1">Delegate(evm.StateDB, stakeMsg); err != nil {
+                                return nil, err
+                        }</span> else {
+                        <span class="cov8" title="1">        evm.StakeMsgs = append(evm.StakeMsgs, stakeMsg)
+                                return nil, n</span><span class="cov0" title="0">il
+                        }
+                }
+</span>        case "Undelegate":
+                {<span class="cov8" title="1">
+                        // a contract </span><span class="cov0" title="0">should only delegate its own balance - nobody else's
+                        address, err := staking.ValidateContractAddress(contract.Caller(), args, "delegatorAddress")
+                        i</span>f err != nil {
+                        <span class="cov8" title="1">        return nil, err
+                        }
+                        validatorAddress, err := staking.ParseAddressFromKey(args, "validatorAddress")
+                        if err != nil {
+                                return nil, err
+                        }
+</span>                        // this type assertion is needed by Golang
+                        amount, err := staking.ParseBigIntFromKey<span class="cov8" title="1">(</span><span class="cov8" title="1">args, "amount")
+                        if err != nil {
+</span>                                return nil, err
+                        }</span>
+                        stakeMsg := &amp;stakingTypes.Undelegate{
+                        <span class="cov8" title="1">        DelegatorAddress: address,
+                                ValidatorAddr</span><span class="cov8" title="1">ess: validatorAddress,
+                                Amount:           amount,
+                        }</span>
+                        <span class="cov8" title="1">return nil, evm.Undelegate(evm.StateDB, stakeMsg)
+                }
+        case "CollectRewards":
+                {
+</span>                        // a contract should only collect its own rewards - nobody else's
+                        address<span class="cov8" title="1">,</span><span class="cov8" title="1"> err := staking.ValidateContractAddress(contract.Caller(), args, "delegatorAddress")
+                        if err != nil {
+                        </span>        return nil, err
+                        }
+                        stakeMsg := &amp;stakingTypes.CollectRewards{
+                                DelegatorAddress: address,
+                        }
+                        return nil, evm.CollectRewards(evm.StateDB, stakeMsg)
+                }
+        default:
+                {
+                        return nil, stakingTypes.ErrInvalidStakingKind
+                }
+        }
+        // return nil, nil -&gt; this never reached
 }
 </pre>
 		
@@ -4985,12 +4996,11 @@ import (
         "math/big"
         "sync/atomic"
         "time"
-        "fmt"
+
         "github.com/ethereum/go-ethereum/common"
         "github.com/ethereum/go-ethereum/crypto"
-        "github.com/harmony-one/harmony/internal/params"
-
         "github.com/harmony-one/harmony/core/types"
+        "github.com/harmony-one/harmony/internal/params"
         stakingTypes "github.com/harmony-one/harmony/staking/types"
 )
 
@@ -5013,10 +5023,10 @@ type (
         GetVRFFunc func(uint64) common.Hash
         // Below functions are used by staking precompile / state transition
         CreateValidatorFunc func(db StateDB, stakeMsg *stakingTypes.CreateValidator) error
-        EditValidatorFunc func(db StateDB, stakeMsg *stakingTypes.EditValidator) error
-        DelegateFunc func(db StateDB, stakeMsg *stakingTypes.Delegate) error
-        UndelegateFunc func(db StateDB, stakeMsg *stakingTypes.Undelegate) error
-        CollectRewardsFunc func(db StateDB, stakeMsg *stakingTypes.CollectRewards) error
+        EditValidatorFunc   func(db StateDB, stakeMsg *stakingTypes.EditValidator) error
+        DelegateFunc        func(db StateDB, stakeMsg *stakingTypes.Delegate) error
+        UndelegateFunc      func(db StateDB, stakeMsg *stakingTypes.Undelegate) error
+        CollectRewardsFunc  func(db StateDB, stakeMsg *stakingTypes.CollectRewards) error
 )
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
@@ -5038,58 +5048,54 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
                         precompiles = PrecompiledContractsSHA3FIPS
                 }</span>
                 <span class="cov8" title="1">if evm.chainRules.IsStakingPrecompile </span><span class="cov8" title="1">{
-                        writeCapablePrecompiles = WriteCapablePrecompiledContracts
-                }</span>
-                <span class="cov8" title="1">if p := precompiles[*contract.CodeAddr]; p != nil </span><span class="cov0" title="0">{
-                        if _, ok := p.(*vrf); ok </span><span class="cov0" title="0">{
-                                if evm.chainRules.IsPrevVRF </span><span class="cov0" title="0">{
+                        precompiles = PrecompiledContractsStaking
+                        </span>writeCapablePrecompiles = WriteCapablePrecompiledContractsStaking
+                <span class="cov8" title="1">}
+</span>                if p := precompiles[*contr</span><span class="cov0" title="0">act.CodeAddr]; p != nil {
+                        if _, ok := p.(*vrf); ok {
+</span>                                if evm.chainRules.IsPrevVRF {
                                         requestedBlockNum := big.NewInt(0).SetBytes(input)
                                         minBlockNum := big.NewInt(0).Sub(evm.BlockNumber, common.Big257)
 
-                                        if requestedBlockNum.Cmp(evm.BlockNumber) == 0 </span><span class="cov0" title="0">{
-                                                input = evm.Context.VRF.Bytes()
-                                        }</span> else<span class="cov0" title="0"> if requestedBlockNum.Cmp(minBlockNum) &gt; 0 &amp;&amp; requestedBlockNum.Cmp(evm.BlockNumber) &lt; 0 </span><span class="cov0" title="0">{
+</span>                                        if requestedBlockNum.Cmp(evm.BlockNumber) == 0 {
+                                                </span>input<span class="cov0" title="0"> = evm.Context.VRF.Bytes()
+</span>                                        } else if requestedBlockNum.Cmp(minBlockNum) &gt; 0 &amp;&amp; requestedBlockNum.Cmp(evm.BlockNumber) &lt; 0 {
                                                 // requested block number is in range
-                                                input = evm.GetVRF(requestedBlockNum.Uint64()).Bytes()
-                                        }</span> else<span class="cov0" title="0"> {
+                                                </span>input<span class="cov0" title="0"> = evm.GetVRF(requestedBlockNum.Uint64()).Bytes()
+                                        } else {
                                                 // else default to the current block's VRF
-                                                input = evm.Context.VRF.Bytes()
-                                        }</span>
-                                } else<span class="cov0" title="0"> {
+                                                </span>input = evm.Context.VRF.Bytes()
+                                        }
+                                } else {
                                         // Override the input with vrf data of the requested block so it can be returned to the contract program.
-                                        input = evm.Context.VRF.Bytes()
-                                }</span>
-                        }
-                        <span class="cov0" title="0">return RunPrecompiledContract(p, input, contract)</span>
+                                        </span>input = evm.Context.VRF.Bytes()
+                                }
+                        <span class="cov0" title="0">}
+</span>                        return RunPrecompiledContract(p, input, contract)
+                <span class="cov8" title="1">}
+</span>                if p := writeCapablePrecompiles[*contract.CodeAddr]; p != nil {
+                        </span>return RunWriteCapablePrecompiledContract(p, evm, contract, input, readOnly)
                 }
-                <span class="cov8" title="1">if p := writeCapablePrecompiles[*contract.CodeAddr]; p != nil </span><span class="cov8" title="1">{
-                        if res, err := RunWriteCapablePrecompiledContract(p, evm, contract, input); err != nil </span><span class="cov8" title="1">{
-                                fmt.Println("RunWriteCapablePrecompiledContract error:", err)
-                                return nil, err
-                        }</span> else<span class="cov0" title="0"> {
-                                return res, nil
-                        }</span>
-                }
-        }
-        <span class="cov8" title="1">for _, interpreter := range evm.interpreters </span><span class="cov8" title="1">{
-                if interpreter.CanRun(contract.Code) </span><span class="cov8" title="1">{
-                        if evm.interpreter != interpreter </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">}
+</span>        for _, interpreter := range evm.interp</span><span class="cov8" title="1">reters {
+                if interpreter.CanRun(contract.Code</span><span class="cov0" title="0">) {
+                        if evm.interpreter != interpreter {
                                 // Ensure that the interpreter pointer is set back
-                                // to its current value upon return.
-                                defer func(i Interpreter) </span><span class="cov0" title="0">{
-                                        evm.interpreter = i
-                                }</span>(evm.interpreter)
-                                <span class="cov0" title="0">evm.interpreter = interpreter</span>
+                                // to its current value up</span><span class="cov0" title="0">on return.
+                                defer func(i Interpreter) {
+                                        </span>evm.interpreter = i
+                                <span class="cov0" title="0">}(evm.interpreter)
+</span>                                evm.interpreter = interpreter
                         }
 
-                        <span class="cov8" title="1">if evm.ChainConfig().IsDataCopyFixEpoch(evm.EpochNumber) </span><span class="cov8" title="1">{
-                                contract.WithDataCopyFix = true
-                        }</span>
-                        <span class="cov8" title="1">return interpreter.Run(contract, input, readOnly)</span>
+</span>                        if evm.ChainConfig().IsDataCopyFixEpoch(evm.EpochNumber) {
+                                </span>contract.WithDataCopyFix = true
+                        <span class="cov8" title="1">}
+</span>                        return interpreter.Run(contract, input, readOnly)
 
                 }
-        }
-        <span class="cov0" title="0">return nil, ErrNoCompatibleInterpreter</span>
+        <span class="cov0" title="0">}
+</span>        return nil, ErrNoCompatibleInterpreter
 }
 
 // Context provides the EVM with auxiliary information. Once provided
@@ -5124,13 +5130,13 @@ type Context struct {
         TxType types.TransactionType
 
         CreateValidator CreateValidatorFunc
-        EditValidator         EditValidatorFunc
+        EditValidator   EditValidatorFunc
         Delegate        DelegateFunc
         Undelegate      UndelegateFunc
         CollectRewards  CollectRewardsFunc
 
         // staking precompile checks this before proceeding forward
-        ShardID                                        uint32
+        ShardID uint32
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -5175,7 +5181,7 @@ type EVM struct {
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmConfig Config) *EVM <span class="cov8" title="1">{
+func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmConfig Config) *EVM {
         evm := &amp;EVM{
                 Context:      ctx,
                 StateDB:      statedb,
@@ -5206,127 +5212,128 @@ func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmCon
         evm.interpreters = append(evm.interpreters, NewEVMInterpreter(evm, vmConfig))
         evm.interpreter = evm.interpreters[0]
 
-        return evm
-}</span>
+        </span>return evm
+}
 
 // Cancel cancels any running EVM operation. This may be called concurrently and
-// it's safe to be called multiple times.
-func (evm *EVM) Cancel() <span class="cov0" title="0">{
-        atomic.StoreInt32(&amp;evm.abort, 1)
-}</span>
+// it's safe to be called<span class="cov0" title="0"> multiple times.
+func (evm *EVM) Cancel() {
+        </span>atomic.StoreInt32(&amp;evm.abort, 1)
+}
 
-// Cancelled returns true if Cancel has been called
-func (evm *EVM) Cancelled() bool <span class="cov0" title="0">{
-        return atomic.LoadInt32(&amp;evm.abort) == 1
-}</span>
+// Cancelled returns true if Canc<span class="cov0" title="0">el has been called
+func (evm *EVM) Cancelled() bool {
+        </span>return atomic.LoadInt32(&amp;evm.abort) == 1
+}
 
-// Interpreter returns the current interpreter
-func (evm *EVM) Interpreter() Interpreter <span class="cov0" title="0">{
-        return evm.interpreter
-}</span>
+// Interpreter returns the current interpr<span class="cov0" title="0">eter
+func (evm *EVM) Interpreter() Interpreter {
+        </span>return evm.interpreter
+}
 
 // Call executes the contract associated with the addr with the given input as
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) <span class="cov8" title="1">{
-        if evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 </span><span class="cov0" title="0">{
-                return nil, gas, nil
-        }</span>
+func (evm *EVM) Call(caller ContractRef, addr </span><span class="cov0" title="0">common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+        if evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 {
+                </span>return nil, gas, nil
+        }
 
-        // Fail if we're trying to execute above the call depth limit
-        <span class="cov8" title="1">if evm.depth &gt; int(params.CallCreateDepth) </span><span class="cov0" title="0">{
-                return nil, gas, ErrDepth
-        }</span>
+        <span class="cov8" title="1">// Fail if we're trying to execute above th</span><span class="cov0" title="0">e call depth limit
+        if evm.depth &gt; int(params.CallCreateDepth) {
+                </span>return nil, gas, ErrDepth
+        }
 
-        <span class="cov8" title="1">txType := evm.Context.TxType
+        txType := evm.Context.TxType
 
-        // Fail if we're trying to transfer more than the available balance
-        if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) </span><span class="cov0" title="0">{
-                return nil, gas, ErrInsufficientBalance
-        }</span>
+        // Fail if we're trying to transfer more than the available balanc</span><span class="cov0" title="0">e
+        if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
+                </span>return nil, gas, ErrInsufficientBalance
+        }
 
-        <span class="cov8" title="1">var (
+        var (
                 to       = AccountRef(addr)
                 snapshot = evm.StateDB.Snapshot()
         )
-        if !evm.StateDB.Exist(addr) &amp;&amp; txType != types.SubtractionOnly </span><span class="cov8" title="1">{
+</span>        if !evm.StateDB.Exist(addr) &amp;&amp; txType != types.SubtractionOnly {
                 precompiles := PrecompiledContractsHomestead
-                writeCapablePrecompiles := make(map[common.Address]WriteCapablePrecompiledContract)
-                if evm.ChainConfig().IsS3(evm.EpochNumber) </span><span class="cov8" title="1">{
-                        precompiles = PrecompiledContractsByzantium
-                }</span>
-                <span class="cov8" title="1">if evm.chainRules.IsIstanbul </span><span class="cov8" title="1">{
-                        precompiles = PrecompiledContractsIstanbul
-                }</span>
-                <span class="cov8" title="1">if evm.chainRules.IsVRF </span><span class="cov8" title="1">{
-                        precompiles = PrecompiledContractsVRF
-                }</span>
-                <span class="cov8" title="1">if evm.chainRules.IsSHA3 </span><span class="cov8" title="1">{
-                        precompiles = PrecompiledContractsSHA3FIPS
-                }</span>
-                <span class="cov8" title="1">if evm.chainRules.IsStakingPrecompile </span><span class="cov8" title="1">{
-                        writeCapablePrecompiles = WriteCapablePrecompiledContracts
-                }</span>
-
-                <span class="cov8" title="1">if writeCapablePrecompiles[addr] == nil &amp;&amp; precompiles[addr] == nil &amp;&amp; evm.ChainConfig().IsS3(evm.EpochNumber) &amp;&amp; value.Sign() == 0 </span><span class="cov0" title="0">{
+                writeCapablePrecompiles := make(map[common.</span><span class="cov8" title="1">Address]WriteCapablePrecompiledContract)
+                if evm.ChainConfig().IsS3(evm.EpochNumber) {
+                        </span>precompiles = PrecompiledContractsByzantium
+                <span class="cov8" title="1">}
+</span>                if evm.chainRules.IsIstanbul {
+                        </span>precompiles = PrecompiledContractsIstanbul
+                <span class="cov8" title="1">}
+</span>                if evm.chainRules.IsVRF {
+                        </span>precompiles = PrecompiledContractsVRF
+                <span class="cov8" title="1">}
+</span>                if evm.chainRules.IsSHA3 {
+                        </span>precompiles = PrecompiledContractsSHA3FIPS
+                <span class="cov8" title="1">}
+</span>                if evm.chainRules.IsStakingPrecompile {
+                        </span>precompiles = PrecompiledContractsStaking
+                        writeCapablePrecompiles = WriteCapablePrecompiledContractsStaking
+                <span class="cov8" title="1">}
+</span>
+                if writeCapablePrecompiles[addr] == nil &amp;</span><span class="cov0" title="0">&amp; precompiles[addr] == nil &amp;&amp; evm.ChainConfig().IsS3(evm.EpochNumber) &amp;&amp; value.Sign() == 0 {
                         // Calling a non existing account, don't do anything, but ping the tracer
-                        if evm.vmConfig.Debug &amp;&amp; evm.depth == 0 </span><span class="cov0" title="0">{
-                                evm.vmConfig.Tracer.CaptureStart(evm, caller.Address(), addr, false, input, gas, value)
-                                evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
-                        }</span>
-                        <span class="cov0" title="0">return nil, gas, nil</span>
-                }
-                <span class="cov8" title="1">evm.StateDB.CreateAccount(addr)</span>
+                        if evm.vmConfig.Debug &amp;&amp; evm.depth == 0 {
+                                </span>evm.vmConfig.Tracer.CaptureStart(evm, caller.Address(), addr, false, input, gas, value)
+                        <span class="cov0" title="0">        evm.vmConfig.Tracer</span>.CaptureEnd(ret, 0, 0, nil)
+                        }
+                <span class="cov8" title="1">        return nil, gas, nil
+</span>                }
+        <span class="cov8" title="1">        evm.StateDB.CreateAccount(addr)
         }
-        <span class="cov8" title="1">evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value, txType)
+        evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value, txType)
 
         codeHash := evm.StateDB.GetCodeHash(addr)
         code := evm.StateDB.GetCode(addr)
-        // If address is a validator address, then it's not a smart contract address
-        // we don't use its code and codeHash fields
-        if evm.Context.IsValidator(evm.StateDB, addr) </span><span class="cov8" title="1">{
-                if evm.chainRules.IsStakingPrecompile </span><span class="cov8" title="1">{
-                        // it contains validator details and code
+        // If address is a validator address, then it'</span><span class="cov8" title="1">s not a smart contract address
+        // we don't use its code and codeHash f</span><span class="cov8" title="1">ields
+        if evm.Context.IsValidator(evm.StateDB, addr) {
+                if evm.chainRules.IsStakingPrecompile {
+                        // it contains</span><span class="cov0" title="0"> validator details and code
                         wrapper, err := evm.StateDB.ValidatorWrapperCopy(addr)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return nil, gas, err
-                        }</span>
-                        <span class="cov8" title="1">code = wrapper.ContractCode
-                        codeHash = crypto.Keccak256Hash(code)</span>
-                } else<span class="cov8" title="1"> {
-                        codeHash = emptyCodeHash
+                        i</span>f err != nil {
+                        <span class="cov8" title="1">        return nil, gas, err
+                        }
+</span>                        code <span class="cov8" title="1">= wrapper.ContractCode
+                        codeHash = crypto.Keccak256Hash(code)
+                } else {
+                        </span>codeHash = emptyCodeHash
                         code = nil
-                }</span>
+                }
         }
-        // Initialise a new contract and set the code that is to be used by the EVM.
+        <span class="cov8" title="1">// Initialise a new contract and set the code that is to be used by the EVM.
         // The contract is a scoped environment for this execution context only.
-        <span class="cov8" title="1">contract := NewContract(caller, to, value, gas)
+        contract := NewContract(caller, to, value, gas)
         contract.SetCallCode(&amp;addr, codeHash, code)
 
         // Even if the account has no code, we need to continue because it might be a precompile
         start := time.Now()
 
-        // Capture the tracer start/end events in debug mode
-        if evm.vmConfig.Debug &amp;&amp; evm.depth == 0 </span><span class="cov0" title="0">{
-                evm.vmConfig.Tracer.CaptureStart(evm, caller.Address(), addr, false, input, gas, value)
+</span>        // Capture the tracer start/end events in debug mode
+        if evm.vmConfig.Debug &amp;&amp; evm.depth == 0 {
+                evm.vmConfig.</span><span class="cov0" title="0">Tracer.CaptureStart(evm, caller.Address(), addr, false, input, gas, value)
 
-                defer func() </span><span class="cov0" title="0">{ // Lazy evaluation of the parameters
+                d</span>efer func() { // Lazy evaluation of the parameters
                         evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
-                }</span>()
+        <span class="cov8" title="1">        }()
         }
-        <span class="cov8" title="1">ret, err = run(evm, contract, input, false)
+        ret, err = run(evm, contract, input, false)
 
         // When an error was returned by the EVM or when setting the creation code
-        // above we revert to the snapshot and consume any gas remaining. Additionally
+        // above we re</span><span class="cov8" title="1">vert to the snapshot and consume any gas remaining. Additionally
         // when we're in homestead this also counts for code storage gas errors.
-        if err != nil </span><span class="cov8" title="1">{
-                evm.StateDB.RevertToSnapshot(snapshot)
-                if err != ErrExecutionReverted </span><span class="cov8" title="1">{
+        if err != nil {
+</span>                evm.StateDB.RevertToSnapshot(snapshot)
+                i</span>f err != ErrExecutionReverted {
                         contract.UseGas(contract.Gas)
-                }</span>
-        }
-        <span class="cov8" title="1">return ret, contract.Gas, err</span>
+        <span class="cov8" title="1">        }
+</span>        }
+        return ret, contract.Gas, err
 }
 
 // CallCode executes the contract associated with the addr with the given input
@@ -5336,21 +5343,21 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 //
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
-func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) <span class="cov0" title="0">{
-        if evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 </span><span class="cov0" title="0">{
+</span>func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+        i</span>f evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 {
                 return nil, gas, nil
-        }</span>
+        }
 
-        // Fail if we're trying to execute above the call depth limit
-        <span class="cov0" title="0">if evm.depth &gt; int(params.CallCreateDepth) </span><span class="cov0" title="0">{
+</span>        // Fail if we're trying to execute above the call depth limit
+        i</span>f evm.depth &gt; int(params.CallCreateDepth) {
                 return nil, gas, ErrDepth
-        }</span>
-        // Fail if we're trying to transfer more than the available balance
-        <span class="cov0" title="0">if !evm.CanTransfer(evm.StateDB, caller.Address(), value) </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">}
+</span>        // Fail if we're trying to transfer more than the available balance
+        i</span>f !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
                 return nil, gas, ErrInsufficientBalance
-        }</span>
+        <span class="cov0" title="0">}
 
-        <span class="cov0" title="0">var (
+        var (
                 snapshot = evm.StateDB.Snapshot()
                 to       = AccountRef(caller.Address())
         )
@@ -5360,31 +5367,31 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
         contract := NewContract(caller, to, value, gas)
         contract.SetCallCode(&amp;addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 
-        ret, err = run(evm, contract, input, false)
-        if err != nil </span><span class="cov0" title="0">{
-                evm.StateDB.RevertToSnapshot(snapshot)
-                if err != ErrExecutionReverted </span><span class="cov0" title="0">{
+</span>        ret, err = run(evm, contract, input, false)
+        if err != nil {
+</span>                evm.StateDB.RevertToSnapshot(snapshot)
+                i</span>f err != ErrExecutionReverted {
                         contract.UseGas(contract.Gas)
-                }</span>
-        }
-        <span class="cov0" title="0">return ret, contract.Gas, err</span>
+        <span class="cov0" title="0">        }
+</span>        }
+        return ret, contract.Gas, err
 }
 
 // DelegateCall executes the contract associated with the addr with the given input
 // as parameters. It reverses the state in case of an execution error.
 //
 // DelegateCall differs from CallCode in the sense that it executes the given address'
-// code with the caller as context and the caller is set to the caller of the caller.
-func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) <span class="cov0" title="0">{
-        if evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 </span><span class="cov0" title="0">{
+// code with the caller as context and the cal</span><span class="cov0" title="0">ler is set to the caller of the caller.
+func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+        i</span>f evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 {
                 return nil, gas, nil
-        }</span>
-        // Fail if we're trying to execute above the call depth limit
-        <span class="cov0" title="0">if evm.depth &gt; int(params.CallCreateDepth) </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">}
+</span>        // Fail if we're trying to execute above the call depth limit
+        i</span>f evm.depth &gt; int(params.CallCreateDepth) {
                 return nil, gas, ErrDepth
-        }</span>
+        <span class="cov0" title="0">}
 
-        <span class="cov0" title="0">var (
+        var (
                 snapshot = evm.StateDB.Snapshot()
                 to       = AccountRef(caller.Address())
         )
@@ -5393,30 +5400,30 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
         contract := NewContract(caller, to, nil, gas).AsDelegate()
         contract.SetCallCode(&amp;addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 
-        ret, err = run(evm, contract, input, false)
-        if err != nil </span><span class="cov0" title="0">{
-                evm.StateDB.RevertToSnapshot(snapshot)
-                if err != ErrExecutionReverted </span><span class="cov0" title="0">{
+</span>        ret, err = run(evm, contract, input, false)
+        if err != nil {
+</span>                evm.StateDB.RevertToSnapshot(snapshot)
+                i</span>f err != ErrExecutionReverted {
                         contract.UseGas(contract.Gas)
-                }</span>
-        }
-        <span class="cov0" title="0">return ret, contract.Gas, err</span>
+        <span class="cov0" title="0">        }
+</span>        }
+        return ret, contract.Gas, err
 }
 
 // StaticCall executes the contract associated with the addr with the given input
 // as parameters while disallowing any modifications to the state during the call.
 // Opcodes that attempt to perform such modifications will result in exceptions
 // instead of performing the modifications.
-func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) <span class="cov0" title="0">{
-        if evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 </span><span class="cov0" title="0">{
+</span>func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+        i</span>f evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 {
                 return nil, gas, nil
-        }</span>
-        // Fail if we're trying to execute above the call depth limit
-        <span class="cov0" title="0">if evm.depth &gt; int(params.CallCreateDepth) </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">}
+</span>        // Fail if we're trying to execute above the call depth limit
+        i</span>f evm.depth &gt; int(params.CallCreateDepth) {
                 return nil, gas, ErrDepth
-        }</span>
+        <span class="cov0" title="0">}
 
-        <span class="cov0" title="0">var (
+        var (
                 to       = AccountRef(addr)
                 snapshot = evm.StateDB.Snapshot()
         )
@@ -5434,15 +5441,15 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 
         // When an error was returned by the EVM or when setting the creation code
         // above we revert to the snapshot and consume any gas remaining. Additionally
-        // when we're in Homestead this also counts for code storage gas errors.
+        // when we're </span><span class="cov0" title="0">in Homestead this also counts for code storage gas errors.
         ret, err = run(evm, contract, input, true)
-        if err != nil </span><span class="cov0" title="0">{
-                evm.StateDB.RevertToSnapshot(snapshot)
-                if err != ErrExecutionReverted </span><span class="cov0" title="0">{
+        if err != nil {
+</span>                evm.StateDB.RevertToSnapshot(snapshot)
+                i</span>f err != ErrExecutionReverted {
                         contract.UseGas(contract.Gas)
-                }</span>
-        }
-        <span class="cov0" title="0">return ret, contract.Gas, err</span>
+        <span class="cov0" title="0">        }
+</span>        }
+        return ret, contract.Gas, err
 }
 
 type codeAndHash struct {
@@ -5450,53 +5457,53 @@ type codeAndHash struct {
         hash common.Hash
 }
 
-func (c *codeAndHash) Hash() common.Hash <span class="cov0" title="0">{
-        if c.hash == (common.Hash{}) </span><span class="cov0" title="0">{
-                c.hash = crypto.Keccak256Hash(c.code)
-        }</span>
-        <span class="cov0" title="0">return c.hash</span>
+</span>func (c *codeAndHash) Hash() common.Hash {
+        i</span>f c.hash == (common.Hash{}) {
+        <span class="cov0" title="0">        c.hash = cry</span>pto.Keccak256Hash(c.code)
+        }
+        return c.hash
 }
 
 // create creates a new contract using code as deployment code.
-func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address) ([]byte, common.Address, uint64, error) <span class="cov0" title="0">{
-        // Depth check execution. Fail if we're trying to execute above the
+func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address) ([]byte, common.Address, uint64, error) {
+        // Depth check execution. Fail if we're try</span><span class="cov0" title="0">ing to execute above the
         // limit.
-        if evm.depth &gt; int(params.CallCreateDepth) </span><span class="cov0" title="0">{
-                return nil, common.Address{}, gas, ErrDepth
-        }</span>
-        <span class="cov0" title="0">if !evm.CanTransfer(evm.StateDB, caller.Address(), value) </span><span class="cov0" title="0">{
-                return nil, common.Address{}, gas, ErrInsufficientBalance
-        }</span>
-        <span class="cov0" title="0">nonce := evm.StateDB.GetNonce(caller.Address())
+        i</span>f evm.depth &gt; int(params.CallCreateDepth) {
+        <span class="cov0" title="0">        return nil, common.Address{}, gas, ErrDepth
+</span>        }
+        i</span>f !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+        <span class="cov0" title="0">        return nil, common.Address{}, gas, ErrInsufficientBalance
+        }
+        nonce := evm.StateDB.GetNonce(caller.Address())
         evm.StateDB.SetNonce(caller.Address(), nonce+1)
 
         // Ensure there's no existing contract already at the designated address
-        contractHash := evm.StateDB.GetCodeHash(address)
-        if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) &amp;&amp; contractHash != emptyCodeHash) </span><span class="cov0" title="0">{
+</span>        contractHash := evm.StateDB.GetCodeHash(address)
+        i</span>f evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) &amp;&amp; contractHash != emptyCodeHash) {
                 return nil, common.Address{}, 0, ErrContractAddressCollision
-        }</span>
+        <span class="cov0" title="0">}
         // Create a new account on the state
-        <span class="cov0" title="0">snapshot := evm.StateDB.Snapshot()
-        evm.StateDB.CreateAccount(address)
-        if evm.ChainConfig().IsEIP155(evm.EpochNumber) </span><span class="cov0" title="0">{
-                evm.StateDB.SetNonce(address, 1)
-        }</span>
-        <span class="cov0" title="0">evm.Transfer(evm.StateDB, caller.Address(), address, value, types.SameShardTx)
+        snapshot := evm.StateDB.Snapshot()
+</span>        evm.StateDB.CreateAccount(address)
+        i</span>f evm.ChainConfig().IsEIP155(evm.EpochNumber) {
+        <span class="cov0" title="0">        evm.StateDB.SetNonce(address, 1)
+        }
+        evm.Transfer(evm.StateDB, caller.Address(), address, value, types.SameShardTx)
 
         // initialise a new contract and set the code that is to be used by the
         // EVM. The contract is a scoped environment for this execution context
         // only.
         contract := NewContract(caller, AccountRef(address), value, gas)
-        contract.SetCodeOptionalHash(&amp;address, codeAndHash)
+        contract.SetCodeOptionalHash(&amp;address, codeAn</span><span class="cov0" title="0">dHash)
 
-        if evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 </span><span class="cov0" title="0">{
+        i</span>f evm.vmConfig.NoRecursion &amp;&amp; evm.depth &gt; 0 {
                 return nil, address, gas, nil
-        }</span>
-
-        <span class="cov0" title="0">if evm.vmConfig.Debug &amp;&amp; evm.depth == 0 </span><span class="cov0" title="0">{
-                evm.vmConfig.Tracer.CaptureStart(evm, caller.Address(), address, true, codeAndHash.code, gas, value)
-        }</span>
-        <span class="cov0" title="0">start := time.Now()
+        <span class="cov0" title="0">}
+</span>
+        i</span>f evm.vmConfig.Debug &amp;&amp; evm.depth == 0 {
+        <span class="cov0" title="0">        evm.vmConfig.Tracer.CaptureStart(evm, caller.Address(), address, true, codeAndHash.code, gas, value)
+        }
+        start := time.Now()
 
         ret, err := run(evm, contract, nil, false)
 
@@ -5504,55 +5511,55 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
         maxCodeSizeExceeded := evm.ChainConfig().IsEIP155(evm.EpochNumber) &amp;&amp; len(ret) &gt; params.MaxCodeSize
         // if the contract creation ran successfully and no errors were returned
         // calculate the gas required to store the code. If the code could not
-        // be stored due to not enough gas set an error and let it be handled
+        // be stored due to not enough gas set</span><span class="cov0" title="0"> an error and let it be handled
         // by the error checking condition below.
-        if err == nil &amp;&amp; !maxCodeSizeExceeded </span><span class="cov0" title="0">{
+        if err == nil &amp;&amp; !maxCodeSizeExceed</span><span class="cov0" title="0">ed {
                 createDataGas := uint64(len(ret)) * params.CreateDataGas
-                if contract.UseGas(createDataGas) </span><span class="cov0" title="0">{
+                i</span>f con<span class="cov0" title="0">tract.UseGas(createDataGas) {
                         evm.StateDB.SetCode(address, ret)
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else {
                         err = ErrCodeStoreOutOfGas
-                }</span>
+                }
         }
 
         // When an error was returned by the EVM or when setting the creation code
-        // above we revert to the snapshot and consume any gas remaining. Additionally
-        // when we're in homestead this also counts for code storage gas errors.
-        <span class="cov0" title="0">if maxCodeSizeExceeded || (err != nil &amp;&amp; (evm.ChainConfig().IsS3(evm.EpochNumber) || err != ErrCodeStoreOutOfGas)) </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">// above we revert to the snapshot and consume any gas remaining. Additionally
+</span>        // when we're in homestead this also counts for code storage gas errors.
+        if maxCodeSizeExceeded || (err !</span><span class="cov0" title="0">= nil &amp;&amp; (evm.ChainConfig().IsS3(evm.EpochNumber) || err != ErrCodeStoreOutOfGas)) {
                 evm.StateDB.RevertToSnapshot(snapshot)
-                if err != ErrExecutionReverted </span><span class="cov0" title="0">{
+                i</span>f err != ErrExecutionReverted {
                         contract.UseGas(contract.Gas)
-                }</span>
+                }
+        <span class="cov0" title="0">}
+</span>        // Assign err if contract code size exceeds the max while the err is still empty.
+        i</span>f maxCodeSizeExceeded &amp;&amp; err == nil {
+        <span class="cov0" title="0">        err = errMaxCodeSizeExceeded
+</span>        }
+        i</span>f evm.vmConfig.Debug &amp;&amp; evm.depth == 0 {
+        <span class="cov0" title="0">        evm.vmConfig.Tracer.CaptureEnd(ret, g</span>as-contract.Gas, time.Since(start), err)
         }
-        // Assign err if contract code size exceeds the max while the err is still empty.
-        <span class="cov0" title="0">if maxCodeSizeExceeded &amp;&amp; err == nil </span><span class="cov0" title="0">{
-                err = errMaxCodeSizeExceeded
-        }</span>
-        <span class="cov0" title="0">if evm.vmConfig.Debug &amp;&amp; evm.depth == 0 </span><span class="cov0" title="0">{
-                evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
-        }</span>
-        <span class="cov0" title="0">return ret, address, contract.Gas, err</span>
+        return ret, address, contract.Gas, err
 
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) <span class="cov0" title="0">{
-        contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()))
+func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+        </span>contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()))
         return evm.create(caller, &amp;codeAndHash{code: code}, gas, value, contractAddr)
-}</span>
+}
 
 // Create2 creates a new contract using code as deployment code.
 //
 // The different between Create2 with Create is Create2 uses sha3(0xff ++ msg.sender ++ salt ++ sha3(init_code))[12:]
 // instead of the usual sender-and-nonce-hash as the address where the contract is initialized at.
-func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *big.Int, salt *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) <span class="cov0" title="0">{
+func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *big.Int, salt *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
         codeAndHash := &amp;codeAndHash{code: code}
-        contractAddr = crypto.CreateAddress2(caller.Address(), common.BigToHash(salt), codeAndHash.Hash().Bytes())
+        </span>contractAddr = crypto.CreateAddress2(caller.Address(), common.BigToHash(salt), codeAndHash.Hash().Bytes())
         return evm.create(caller, codeAndHash, gas, endowment, contractAddr)
-}</span>
+}
 
-// ChainConfig returns the environment's chain configuration
-func (evm *EVM) ChainConfig() *params.ChainConfig <span class="cov8" title="1">{ return evm.chainConfig }</span>
+</span>// ChainConfig returns the environment's chain configuration
+func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 </pre>
 		
 		<pre class="file" id="file7" style="display: none">package bls
@@ -5567,7 +5574,7 @@ import (
 )
 
 var (
-        emptyBLSPubKey = SerializedPublicKey{}
+        emptyBLSPubKey    = SerializedPublicKey{}
         emptyBLSSignature = SerializedSignature{}
 )
 
@@ -5775,7 +5782,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(101),
                 SHA3Epoch:                  big.NewInt(725), // Around Mon Oct 11 2021, 19:00 UTC
                 HIP6And8Epoch:              big.NewInt(725), // Around Mon Oct 11 2021, 19:00 UTC
-                StakingPrecompileEpoch:                        EpochTBD,
+                StakingPrecompileEpoch:     EpochTBD,
         }
 
         // TestnetChainConfig contains the chain parameters to run a node on the harmony test network.
@@ -5808,7 +5815,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(74570),
                 HIP6And8Epoch:              big.NewInt(74570),
-                StakingPrecompileEpoch:                        EpochTBD,
+                StakingPrecompileEpoch:     EpochTBD,
         }
 
         // PangaeaChainConfig contains the chain parameters for the Pangaea network.
@@ -5842,7 +5849,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              big.NewInt(0),
-                StakingPrecompileEpoch:                        big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(0),
         }
 
         // PartnerChainConfig contains the chain parameters for the Partner network.
@@ -5876,7 +5883,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              big.NewInt(0),
-                StakingPrecompileEpoch:                        big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(0),
         }
 
         // StressnetChainConfig contains the chain parameters for the Stress test network.
@@ -5910,7 +5917,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              big.NewInt(0),
-                StakingPrecompileEpoch:                        big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(0),
         }
 
         // LocalnetChainConfig contains the chain parameters to run for local development.
@@ -5943,7 +5950,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              EpochTBD, // Never enable it for localnet as localnet has no external validator setup
-                StakingPrecompileEpoch:                        big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(0),
         }
 
         // AllProtocolChanges ...
@@ -5978,7 +5985,7 @@ var (
                 big.NewInt(0),                      // ReceiptLogEpoch
                 big.NewInt(0),                      // SHA3Epoch
                 big.NewInt(0),                      // HIP6And8Epoch
-                big.NewInt(0),                                                                                        // StakingPrecompileEpoch
+                big.NewInt(0),                      // StakingPrecompileEpoch
         }
 
         // TestChainConfig ...
@@ -6339,8 +6346,8 @@ func isForked(s, epoch *big.Int) bool <span class="cov8" title="1">{
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-        ChainID                                                                                                                                                         *big.Int
-        EthChainID                                                                                                                                                      *big.Int
+        ChainID                                                                                              *big.Int
+        EthChainID                                                                                           *big.Int
         IsCrossLink, IsEIP155, IsS3, IsReceiptLog, IsIstanbul, IsVRF, IsPrevVRF, IsSHA3, IsStakingPrecompile bool
 }
 
@@ -6355,16 +6362,16 @@ func (c *ChainConfig) Rules(epoch *big.Int) Rules <span class="cov8" title="1">{
                 ethChainID = new(big.Int)
         }</span>
         <span class="cov8" title="1">return Rules{
-                ChainID:                               new(big.Int).Set(chainID),
-                EthChainID:                            new(big.Int).Set(ethChainID),
-                IsCrossLink:                           c.IsCrossLink(epoch),
-                IsEIP155:                              c.IsEIP155(epoch),
-                IsS3:                                  c.IsS3(epoch),
-                IsReceiptLog:                                 c.IsReceiptLog(epoch),
-                IsIstanbul:                                         c.IsIstanbul(epoch),
-                IsVRF:                                 c.IsVRF(epoch),
-                IsPrevVRF:                                         c.IsPrevVRF(epoch),
-                IsSHA3:                                c.IsSHA3(epoch),
+                ChainID:             new(big.Int).Set(chainID),
+                EthChainID:          new(big.Int).Set(ethChainID),
+                IsCrossLink:         c.IsCrossLink(epoch),
+                IsEIP155:            c.IsEIP155(epoch),
+                IsS3:                c.IsS3(epoch),
+                IsReceiptLog:        c.IsReceiptLog(epoch),
+                IsIstanbul:          c.IsIstanbul(epoch),
+                IsVRF:               c.IsVRF(epoch),
+                IsPrevVRF:           c.IsPrevVRF(epoch),
+                IsSHA3:              c.IsSHA3(epoch),
                 IsStakingPrecompile: c.IsStakingPrecompile(epoch),
         }</span>
 }
@@ -6373,15 +6380,15 @@ func (c *ChainConfig) Rules(epoch *big.Int) Rules <span class="cov8" title="1">{
 		<pre class="file" id="file9" style="display: none">package staking
 
 import (
-  "math/big"
-  "strings"
+        "math/big"
+        "strings"
 
-  stakingTypes "github.com/harmony-one/harmony/staking/types"
-  "github.com/harmony-one/harmony/accounts/abi"
-  "github.com/harmony-one/harmony/numeric"
-  "github.com/harmony-one/harmony/crypto/bls"
-  "github.com/ethereum/go-ethereum/common"
-  "github.com/pkg/errors"
+        "github.com/ethereum/go-ethereum/common"
+        "github.com/harmony-one/harmony/accounts/abi"
+        "github.com/harmony-one/harmony/crypto/bls"
+        "github.com/harmony-one/harmony/numeric"
+        stakingTypes "github.com/harmony-one/harmony/staking/types"
+        "github.com/pkg/errors"
 )
 
 var abiStaking abi.ABI
@@ -6392,413 +6399,406 @@ func init() <span class="cov8" title="1">{
         StakingABIJSON := `
         [
           {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "delegatorAddress",
+                "type": "address"
+              }
+            ],
             "name": "CollectRewards",
             "outputs": [],
-            "inputs": [
-              {
-                "type": "uint8",
-                "name": "DirectiveUnused",
-                "indexed": false
-              },
-              {
-                "type": "address",
-                "name": "DelegatorAddress",
-                "indexed": false
-              }
-            ],
-            "constant": false,
-            "payable": false,
+            "stateMutability": "nonpayable",
             "type": "function"
           },
           {
-            "name": "DelegateOrUndelegate",
-            "outputs": [],
             "inputs": [
               {
-                "type": "uint8",
-                "name": "DirectiveUnused",
-                "indexed": false
+                "internalType": "address",
+                "name": "validatorAddress",
+                "type": "address"
               },
               {
-                "type": "address",
-                "name": "DelegatorAddress",
-                "indexed": false
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "identity",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "website",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "securityContact",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "details",
+                    "type": "string"
+                  }
+                ],
+                "internalType": "struct Description",
+                "name": "description",
+                "type": "tuple"
               },
               {
-                "type": "address",
-                "name": "ValidatorAddress",
-                "indexed": false
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "rate",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "maxRate",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "maxChangeRate",
+                    "type": "string"
+                  }
+                ],
+                "internalType": "struct CommissionRate",
+                "name": "commissionRates",
+                "type": "tuple"
               },
               {
-                "type": "uint256",
-                "name": "Amount",
-                "indexed": false
+                "internalType": "uint256",
+                "name": "minSelfDelegation",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "maxTotalDelegation",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes[]",
+                "name": "slotPubKeys",
+                "type": "bytes[]"
+              },
+              {
+                "internalType": "bytes[]",
+                "name": "slotKeySigs",
+                "type": "bytes[]"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
               }
             ],
-            "constant": false,
-            "payable": false,
-            "type": "function"
-          },
-          {
             "name": "CreateValidator",
             "outputs": [],
-            "inputs": [
-              {
-                "type": "uint8",
-                "name": "DirectiveUnused",
-                "indexed": false
-              },
-              {
-                "name": "ValidatorAddress",
-                "type": "address",
-                "indexed": false
-              },
-              {
-                "components": [
-                  {
-                    "name": "Name",
-                    "type": "string",
-                    "indexed": false
-                  },
-                  {
-                    "name": "Identity",
-                    "type": "string",
-                    "indexed": false
-                  },
-                  {
-                    "name": "Website",
-                    "type": "string",
-                    "indexed": false
-                  },
-                  {
-                    "name": "SecurityContact",
-                    "type": "string",
-                    "indexed": false
-                  },
-                  {
-                    "name": "Details",
-                    "type": "string",
-                    "indexed": false
-                  }
-                ],
-                "name": "Description",
-                "type": "tuple",
-                "indexed": false
-              },
-              {
-                "components": [
-                  {
-                    "name": "Rate",
-                    "type": "string",
-                    "indexed": false
-                  },
-                  {
-                    "name": "MaxRate",
-                    "type": "string",
-                    "indexed": false
-                  },
-                  {
-                    "name": "MaxChangeRate",
-                    "type": "string",
-                    "indexed": false
-                  }
-                ],
-                "name": "CommissionRates",
-                "type": "tuple",
-                "indexed": false
-              },
-              {
-                "name": "MinSelfDelegation",
-                "type": "uint256",
-                "indexed": false
-              },
-              {
-                "name": "MaxTotalDelegation",
-                "type": "uint256",
-                "indexed": false
-              },
-              {
-                "name": "SlotPubKeys",
-                "type": "bytes[]",
-                "indexed": false
-              },
-                                {
-                "name": "SlotKeySigs",
-                "type": "bytes[]",
-                "indexed": false
-              },
-              {
-                "name": "Amount",
-                "type": "uint256",
-                "indexed": false
-              }
-            ],
-            "constant": false,
-            "payable": false,
+            "stateMutability": "nonpayable",
             "type": "function"
           },
           {
-            "name": "EditValidator",
-            "outputs": [],
             "inputs": [
               {
-                "type": "uint8",
-                "name": "DirectiveUnused",
-                "indexed": false
+                "internalType": "address",
+                "name": "delegatorAddress",
+                "type": "address"
               },
               {
-                "name": "ValidatorAddress",
-                "type": "address",
-                "indexed": false
+                "internalType": "address",
+                "name": "validatorAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "name": "Delegate",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "validatorAddress",
+                "type": "address"
               },
               {
                 "components": [
                   {
-                    "name": "Name",
-                    "type": "string",
-                    "indexed": false
+                    "internalType": "string",
+                    "name": "name",
+                    "type": "string"
                   },
                   {
-                    "name": "Identity",
-                    "type": "string",
-                    "indexed": false
+                    "internalType": "string",
+                    "name": "identity",
+                    "type": "string"
                   },
                   {
-                    "name": "Website",
-                    "type": "string",
-                    "indexed": false
+                    "internalType": "string",
+                    "name": "website",
+                    "type": "string"
                   },
                   {
-                    "name": "SecurityContact",
-                    "type": "string",
-                    "indexed": false
+                    "internalType": "string",
+                    "name": "securityContact",
+                    "type": "string"
                   },
                   {
-                    "name": "Details",
-                    "type": "string",
-                    "indexed": false
+                    "internalType": "string",
+                    "name": "details",
+                    "type": "string"
                   }
                 ],
-                "name": "Description",
-                "type": "tuple",
-                "indexed": false
+                "internalType": "struct Description",
+                "name": "description",
+                "type": "tuple"
               },
               {
-                "name": "CommissionRate",
-                "type": "string",
-                "indexed": false
+                "internalType": "string",
+                "name": "commissionRate",
+                "type": "string"
               },
               {
-                "name": "MinSelfDelegation",
-                "type": "uint256",
-                "indexed": false
+                "internalType": "uint256",
+                "name": "minSelfDelegation",
+                "type": "uint256"
               },
               {
-                "name": "MaxTotalDelegation",
-                "type": "uint256",
-                "indexed": false
+                "internalType": "uint256",
+                "name": "maxTotalDelegation",
+                "type": "uint256"
               },
               {
-                "name": "SlotKeyToRemove",
-                "type": "bytes",
-                "indexed": false
+                "internalType": "bytes",
+                "name": "slotKeyToRemove",
+                "type": "bytes"
               },
               {
-                "name": "SlotKeyToAdd",
-                "type": "bytes",
-                "indexed": false
+                "internalType": "bytes",
+                "name": "slotKeyToAdd",
+                "type": "bytes"
               },
-                                {
-                "name": "SlotKeyToAddSig",
-                "type": "bytes",
-                "indexed": false
+              {
+                "internalType": "bytes",
+                "name": "slotKeyToAddSig",
+                "type": "bytes"
               }
             ],
-            "constant": false,
-            "payable": false,
+            "name": "EditValidator",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "delegatorAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "validatorAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "name": "Undelegate",
+            "outputs": [],
+            "stateMutability": "nonpayable",
             "type": "function"
           }
         ]
         `
         abiStaking, _ = abi.JSON(strings.NewReader(StakingABIJSON))
-}</span>
-
-func UnpackFromStakingMethod(methodName string, args map[string]interface{}, input []byte) error <span class="cov8" title="1">{
-        if method, ok := abiStaking.Methods[methodName]; ok </span><span class="cov8" title="1">{
-                err := method.Inputs.UnpackIntoMap(args, input)
-                return err
-        }</span> else<span class="cov8" title="1"> {
-                // this should never happen, unless you make a typo in the precompiled code
-                return errors.Errorf("Key %s is not an ABI method", methodName)
-        }</span>
 }
 
-func ValidateContractAddress(contractCaller common.Address, args map[string]interface{}, key string) (common.Address, error) <span class="cov8" title="1">{
-        address, err := ParseAddressFromKey(args, key)
-        if err != nil </span><span class="cov8" title="1">{
+</span>func ParseStakingMethod(input []byte) (*abi.Method, error) {
+        return abiStaking.MethodById(input)
+}
+</span>
+func ValidateContractAddress(contractCaller common.Address, args map[string]interface{}, key string) (common.Address, error) {
+        a</span>ddres<span class="cov8" title="1">s, err := ParseAddressFromKey(args, key)
+        if err != nil {
                 return common.Address{}, err
         }</span>
-        <span class="cov8" title="1">if contractCaller != address </span><span class="cov8" title="1">{
+        if contractCaller != address {
                 return common.Address{}, errors.Errorf(
                         "[StakingPrecompile] Address mismatch, expected %s have %s",
                         contractCaller.String(), address.String(),
                 )
-        }</span> else<span class="cov8" title="1"> {
-                return address, nil
-        }</span>
-}
+</span>        } else {
+                </span>return address, nil
+        <span class="cov8" title="1">}
+</span>}
 
-func ParseAddressFromKey(args map[string]interface{}, key string) (common.Address, error) <span class="cov8" title="1">{
-        if byteAddress, ok := args[key].([]byte); ok </span><span class="cov8" title="1">{
-                address := common.BytesToAddress(byteAddress)
+func ParseAddressFromKey(args map[string]interface{}, key string) (common.Address, error) {
+        if byteAddress, ok := args[key].([]byte); ok {
+                </span>addre<span class="cov8" title="1">ss := common.BytesToAddress(byteAddress)
                 return address, nil
-        }</span> else<span class="cov8" title="1"> if address, ok := args[key].(common.Address); ok </span><span class="cov8" title="1">{
+        }</span> else if address, ok := args[key].(common.Address); ok {
                 return address, nil
-        }</span> else<span class="cov8" title="1"> {
+        } else {
                 return common.Address{}, errors.Errorf("Cannot parse address from %v", args[key])
-        }</span>
-}
+        }
+</span>}
 
-func ParseDescription(args map[string]interface{}) (stakingTypes.Description, error) <span class="cov8" title="1">{
+fu</span>nc Pa<span class="cov8" title="1">rseDescription(args map[string]interface{}, key st</span><span class="cov8" title="1">ring) (stakingTypes.Description, error) {
         // mostly the same struct as stakingTypes.Description
-        // except the JSON tag for SecurityContact is security-contact there
+        /</span>/ exc<span class="cov8" title="1">ept the JSON tag for SecurityContact is security-contact there
         // so type assert it through this one
-        if description, ok := args["Description"].(struct {
-                        Name string "json:\"Name\""
-                        Identity string "json:\"Identity\""
-                        Website string "json:\"Website\""
-                        SecurityContact string "json:\"SecurityContact\""
-                        Details string "json:\"Details\""
-                }); ok </span><span class="cov8" title="1">{
-                        return stakingTypes.Description{
-                                description.Name,
-                                description.Identity,
-                                description.Website,
-                                description.SecurityContact,
-                                description.Details,
+        i</span>f description, ok := args[key].(struct {
+                Name            string "json:\"name\""
+                Identity        string "json:\"identity\""
+                Website         string "json:\"website\""
+                SecurityContact string "json:\"securityContact\""
+                Details         string "json:\"details\""
+        }); ok {
+                return stakingTypes.Description{
+                        description.Name,
+                        description.Identity,
+                        description.Website,
+                        description.SecurityContact,
+                        description.Details,
                 }, nil
-        }</span> else<span class="cov8" title="1"> {
+</span>        } else {
                 return stakingTypes.Description{}, errors.Errorf(
-                        "Cannot parse Description from %v", args["Description"])
-        }</span>
+                        "Cannot parse Description from %v", args[key])
+        }
 }
 
-func ParseCommissionRates(args map[string]interface{}) (stakingTypes.CommissionRates, error) <span class="cov8" title="1">{
-        // CommissionRates here is parsed as containing 3 strings
+func ParseCommissionRates(args map[string]interface{}, key string) (stakingTypes.CommissionRates, error) {
+        /</span>/ Com<span class="cov8" title="1">missionRates here is parsed as containing 3 strings
         // whereas the actual stakingTypes.CommissionRates has numeric.Dec
         // create a new structure on the fly to allow type assertion
-        if commissionRates, ok := args["CommissionRates"].(struct {
-                        Rate string "json:\"Rate\""
-                        MaxRate string "json:\"MaxRate\""
-                        MaxChangeRate string "json:\"MaxChangeRate\""
-                }); ok </span><span class="cov8" title="1">{
-                        rate, err := numeric.NewDecFromStr(commissionRates.Rate)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return stakingTypes.CommissionRates{}, err
-                        }</span>
-                        <span class="cov8" title="1">maxRate, err := numeric.NewDecFromStr(commissionRates.MaxRate)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return stakingTypes.CommissionRates{}, err
-                        }</span>
-                        <span class="cov8" title="1">maxChangeRate, err := numeric.NewDecFromStr(commissionRates.MaxChangeRate)
-                        if err != nil </span><span class="cov0" title="0">{
-                                return stakingTypes.CommissionRates{}, err
-                        }</span>
-                        <span class="cov8" title="1">return stakingTypes.CommissionRates{rate, maxRate, maxChangeRate}, nil</span>
-        } else<span class="cov8" title="1"> {
-                return stakingTypes.CommissionRates{}, errors.Errorf(
-                        "Cannot parse CommissionRates from %v", args["CommissionRates"])
-        }</span>
-}
+        i</span>f commissionRates, ok := args[key].(struct {
+                Rate          string "json:\"rate\""
+                MaxRate       string "json:\"maxRate\""
+                MaxChangeRate string "json:\"maxChangeRate\""
+        }); ok {
+                rate, err := numeric.NewDecFromStr(commissionRates.Rate)
+                if err != nil {
+                        return stakingTypes.CommissionRates{}, err
+                }
+                maxRate, err := numeric.NewDecFromStr(commissionRates.MaxRate)
+                if err != nil {
+                        return</span><span class="cov8" title="1"> stakingTypes.CommissionRates{}, err
+                }
+                maxChangeRate, </span><span class="cov0" title="0">err := numeric.NewDecFromStr(commissionRates.MaxChangeRate)
+                if err != nil {
+                        r</span>eturn stakingTypes.CommissionRates{}, err
+                }<span class="cov8" title="1">
+                return stakingT</span><span class="cov0" title="0">ypes.CommissionRates{rate, maxRate, maxChangeRate}, nil
+        } else {
+                re</span>turn stakingTypes.CommissionRates{}, errors.Errorf(
+                        <span class="cov8" title="1">"Cannot parse CommissionRates from %v", args[key])
+        }
+</span>}
 
-func ParseBigIntFromKey(args map[string]interface{}, key string) (*big.Int, error) <span class="cov8" title="1">{
-        bigInt, ok := args[key].(*big.Int);
-        if !ok </span><span class="cov8" title="1">{
+</span>fun<span class="cov8" title="1">c ParseBigIntFromKey(args map[string]interface{}, key string) (*big.In</span>t, error) {
+        bigInt<span class="cov8" title="1">, ok := args[key].(*big.Int)
+        if !ok {
                 return nil, errors.Errorf(
-                        "Cannot parse BigInt from %v", args[key])
-        }</span> else<span class="cov8" title="1"> {
+                </span>        "Cannot parse BigInt from %v", args[key])
+        } else {
                 return bigInt, nil
-        }</span>
+        }
 }
 
-func ParseSlotPubKeys(args map[string]interface{}) ([]bls.SerializedPublicKey, error) <span class="cov8" title="1">{
+</span>func ParseSlotPubKeys(args map[string]interface{}, key string) ([]bls.SerializedPublicKey, error) {
         // cast it into bytes
-        pubKeys, ok := args["SlotPubKeys"].([][]byte);
-        if !ok </span><span class="cov8" title="1">{
-                return nil, errors.Errorf(
-                        "Cannot parse SlotPubKeys from %v", args["SlotPubKeys"])
-        }</span>
-        <span class="cov8" title="1">result := make([]bls.SerializedPublicKey, len(pubKeys))
-        for i, pubKey := range pubKeys </span><span class="cov8" title="1">{
-                if serializedKey, err := bls.BytesToSerializedPublicKey(pubKey); err != nil </span><span class="cov8" title="1">{
-                        return nil, err
-                }</span> else<span class="cov8" title="1"> {
+        p</span>ubKey<span class="cov8" title="1">s, ok := args[key].([][]byte)
+        if !ok {
+                </span>return nil, errors.Errorf(
+                        "Cannot parse SlotPubKeys from %v", args[key])
+        }
+        result := make([]bls.SerializedPublicKey, len(pubKeys))
+        for i, pubKey := range pubKeys {
+                if serializedKey, err := bls.BytesToSerializedPublicKey(pubKey); err != nil {
+                        retur</span><span class="cov8" title="1">n nil, err
+                } else {
                         result[i] = serializedKey
-                }</span>
-        }
-        <span class="cov8" title="1">return result, nil</span>
-}
-
-func ParseSlotKeySigs(args map[string]interface{}) ([]bls.SerializedSignature, error) <span class="cov8" title="1">{
+                </span>}
+        <span class="cov8" title="1">}
+        return result, nil
+</span>}
+</span>
+fun</span>c Par<span class="cov8" title="1">seSlotKeySigs(args map[string]interface{}, key string) ([]bls.SerializedSignature, error) {
         // cast it into bytes
-        sigs, ok := args["SlotKeySigs"].([][]byte);
-        if !ok </span><span class="cov8" title="1">{
-                return nil, errors.Errorf(
-                        "Cannot parse SlotKeySigs from %v", args["SlotKeySigs"])
-        }</span>
-        <span class="cov8" title="1">result := make([]bls.SerializedSignature, len(sigs))
-        for i, sig := range sigs </span><span class="cov8" title="1">{
-                if serializedSig, err := bls.BytesToSerializedSignature(sig); err != nil </span><span class="cov8" title="1">{
-                        return nil, err
-                }</span> else<span class="cov8" title="1"> {
+        si</span>gs, ok := args[key].([][]byte)
+        if !ok {
+        <span class="cov8" title="1">        return nil, error</span>s.Errorf(
+                        "Cannot parse SlotKeySigs from %v", args[key])
+        }
+        result := make([]bls.SerializedSignature, len(sigs))
+        for i, sig := range sigs {
+                if serializedSig, err := bls.BytesToSerializedSignature(sig); err != nil {
+                        retur</span><span class="cov8" title="1">n nil, err
+                } else {
                         result[i] = serializedSig
-                }</span>
-        }
-        <span class="cov8" title="1">return result, nil</span>
-}
-
-func ParseSlotPubKeyFromKey(args map[string]interface{}, key string) (*bls.SerializedPublicKey, error) <span class="cov8" title="1">{
+                </span>}
+        <span class="cov8" title="1">}
+        return result, nil
+</span>}
+</span>
+fun</span>c Par<span class="cov8" title="1">seSlotPubKeyFromKey(args map[string]interface{}, key string) (*bls.SerializedPublicKey, error) {
         // convert to bytes
-        pubKeyBytes, ok := args[key].([]byte);
-        if !ok </span><span class="cov8" title="1">{
-                return nil, errors.Errorf(
+        pu</span>bKeyBytes, ok := args[key].([]byte)
+        if !ok {
+        <span class="cov8" title="1">        return nil, error</span>s.Errorf(
                         "Cannot parse SlotPubKey from %v", args[key])
-        }</span>
-        <span class="cov8" title="1">if result, err := bls.BytesToSerializedPublicKey(pubKeyBytes); err == nil </span><span class="cov8" title="1">{
-                return &amp;result, nil
-        }</span> else<span class="cov8" title="1"> {
-                return nil, err
-        }</span>
-}
-
-func ParseSlotKeySigFromKey(args map[string]interface{}, key string) (*bls.SerializedSignature, error) <span class="cov8" title="1">{
-        // convert to bytes
-        sigBytes, ok := args[key].([]byte);
-        if !ok </span><span class="cov8" title="1">{
-                return nil, errors.Errorf(
-                        "Cannot parse SlotKeySig from %v", args[key])
-        }</span>
-        <span class="cov8" title="1">if result, err := bls.BytesToSerializedSignature(sigBytes); err == nil </span><span class="cov8" title="1">{
-                return &amp;result, nil
-        }</span> else<span class="cov8" title="1"> {
-                return nil, err
-        }</span>
-}
-
-func ParseCommissionRate(args map[string]interface{}) (*numeric.Dec, error) <span class="cov8" title="1">{
-        // expect string
-        commissionRate, ok := args["CommissionRate"].(string)
-        if !ok </span><span class="cov8" title="1">{
-                return nil, errors.Errorf(
-                        "Cannot parse CommissionRate from %v", args["CommissionRate"])
-        }</span> else<span class="cov8" title="1"> {
-                rate, err := numeric.NewDecFromStr(commissionRate)
-                if err != nil </span><span class="cov0" title="0">{
-                        return nil, err
-                }</span> else<span class="cov8" title="1"> {
-                        return &amp;rate, nil
-                }</span>
         }
+        if result, err := bls.BytesToSerializedPublicKey(pubKeyBytes); err == nil {
+                return &amp;result, nil
+        } else {
+                return</span><span class="cov8" title="1"> nil, err
+        }
+}
+
+</span>f<span class="cov8" title="1">unc ParseSlotKeySigFromKey(args map[string]interface{}, key string) (*bls.</span><span class="cov8" title="1">SerializedSignature, error) {
+        // convert to bytes
+        s</span>igByt<span class="cov8" title="1">es, ok := args[key].([]byte)
+        if !ok {
+                </span>return nil, errors.Errorf(
+                        "Cannot parse SlotKeySig from %v", args[key])
+        }
+        if result, err := bls.BytesToSerializedSignature(sigBytes); err == nil {
+                return &amp;result, nil
+        } else {
+                return</span><span class="cov8" title="1"> nil, err
+        }
+}
+
+</span>f<span class="cov8" title="1">unc ParseCommissionRate(args map[string]interface{}, key string) (*nume</span><span class="cov8" title="1">ric.Dec, error) {
+        // expect string
+        c</span>ommis<span class="cov8" title="1">sionRate, ok := args[key].(string)
+        if !ok {
+                </span>return nil, errors.Errorf(
+                        "Cannot parse CommissionRate from %v", args[key])
+        } else {
+                rate, err := numeric.NewDecFromStr(commissionRate)
+                if err != nil {
+                        return nil, err
+                } else</span><span class="cov8" title="1"> {
+                        return &amp;rate, nil
+                }
+        }</span>
 }
 </pre>
 		
