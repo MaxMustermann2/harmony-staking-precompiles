@@ -1,1 +1,1 @@
-rm -r build && brownie test --network private -vv -s
+rm -rf build && brownie test --network private -vv -s
