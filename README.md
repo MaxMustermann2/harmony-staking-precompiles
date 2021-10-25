@@ -47,10 +47,11 @@ The following tests are designed to cover the edge cases of staking, and do not 
 12. `EditValidator` with `CommissionRate` > `MaxRate`
 13. `EditValidator` with a `SlotKeyToRemove` that doesn't exist
 14. `EditValidator` with signature mismatch between `SlotKeyToAdd` and `SlotKeyToAddSig`
-15. `Delegate` with balance < delegation amount
-16. `Undelegate` from a non-existing validator
-17. `Undelegate` with amount > previously delegated amount
-18. `CollectRewards` when there are no other rewards to collect
-19. Malicious contracts attempting to `CreateValidator` / `EditValidator` / `Delegate` / `Undelegate` / `CollectRewards` from accounts other than themselves will result in a failure (`malicious_collect_rewards_fail_to_collect_others_rewards` in `test_staking_contract.py`)
+15. `EditValidator` with incorrect length for `SlotPubKey` or `SlotKeySig`, or mismatch between `SlotPubKey` and `SlotKeySig`
+16. `Delegate` with balance < delegation amount
+17. `Undelegate` from a non-existing validator
+18. `Undelegate` with amount > previously delegated amount
+19. `CollectRewards` when there are no other rewards to collect
+20. Malicious contracts attempting to `CreateValidator` / `EditValidator` / `Delegate` / `Undelegate` / `CollectRewards` from accounts other than themselves will result in a failure (`malicious_collect_rewards_fail_to_collect_others_rewards` in `test_staking_contract.py`)
 
 Correctly formed transactions (those which end with `_success` go through), and are part of the tests in this repository.
