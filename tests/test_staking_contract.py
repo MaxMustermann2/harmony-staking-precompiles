@@ -174,6 +174,20 @@ def test_edit_validator_fail_bls_sig_mismatch():
     receipt = w3.eth.wait_for_transaction_receipt(tx.txid)
     assert(int(receipt['logs'][0]['data'][-1:]) == 0)
 
+def test_edit_validator_fail_incorrect_bls_length():
+    tx = staking_contract._editValidator(list(description.values()), '0.15', minSelfDelegation, maxTotalDelegation, slotPubKeysOfIncorrectLength[0], slotPubKeys[0], slotKeySigs[0], {'from': accounts[0].address, 'gas_limit': 5500000, 'gas_price': 1e9})
+    receipt = w3.eth.wait_for_transaction_receipt(tx.txid)
+    validators = staking.get_all_validator_addresses(endpoint=test_net)
+    assert(len(validators) == 0)
+    assert(int(receipt['logs'][0]['data'][-1:]) == 0)
+
+def test_edit_validator_fail_incorrect_bls_sig_length():
+    tx = staking_contract._editValidator(list(description.values()), '0.15', minSelfDelegation, maxTotalDelegation, slotPubKeys[0], slotPubKeys[0], slotKeySigsOfIncorrectLength[0], {'from': accounts[0].address, 'gas_limit': 5500000, 'gas_price': 1e9})
+    receipt = w3.eth.wait_for_transaction_receipt(tx.txid)
+    validators = staking.get_all_validator_addresses(endpoint=test_net)
+    assert(len(validators) == 0)
+    assert(int(receipt['logs'][0]['data'][-1:]) == 0)
+
 def test_edit_validator_success():
     validators = staking.get_all_validator_addresses(endpoint=test_net)
     validator_information = staking.get_validator_information(validators[0], endpoint=test_net)
