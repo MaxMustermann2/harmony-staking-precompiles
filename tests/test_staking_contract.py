@@ -238,7 +238,7 @@ def test_collect_rewards():
     receipt = w3.eth.wait_for_transaction_receipt(tx.txid)
     assert(int(receipt['logs'][0]['data'][-1:]) == 0)
 
-def malicious_collect_rewards_fail_to_collect_others_rewards():
+def test_malicious_collect_rewards_fail_to_collect_others_rewards():
     MaliciousContract.deploy({'from': accounts[0]})
     malicious_contract = MaliciousContract[0]
     tx = malicious_contract.collectRewards(staking_contract.address, {'from': accounts[0].address})
