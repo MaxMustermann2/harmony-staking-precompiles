@@ -1,4 +1,4 @@
 eth-brownie>=1.10.0,<2.0.0
-https://github.com/MaxMustermann2/pyhmy/archive/refs/heads/master.zip
+https://github.com/MaxMustermann2/pyhmy/archive/refs/heads/validator-sigs.zip
 python-dotenv
 eth-account==0.5.4
