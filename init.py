@@ -94,11 +94,11 @@ initial_funding = [
         "signed-raw-tx": "0xf86f06843b9aca008252088080948ff9af553195936502f09a138532f84c7ca704788a152d02c7e14af68000008028a01a4c6dbc9177cf9057de09d4f654950a38aba83e98502d59b478f899b196c4aaa00652c34a53082aee876713954ce70a21288c3727c29fb9c729ce10f19d106370",
     }
 ]
-print("Waiting for node at {} to start producing blocks".format(test_net))
+print("Waiting for node at {} to boot up".format(test_net))
 current_block_num = 0
 timeout = 60
 start_time = time.time()
-while((current_block_num==0) and (time.time() - start_time) <= timeout):
+while((current_block_num == 0) and (time.time() - start_time) <= timeout):
     try:
         current_block_num = blockchain.get_block_number(test_net)
         print(current_block_num)
@@ -107,16 +107,21 @@ while((current_block_num==0) and (time.time() - start_time) <= timeout):
         continue
     time.sleep(1)
 if current_block_num > 0:
-    print("First block has been produced, moving ahead")
+    print("At least one block has been produced")
     print("Undertaking initial funding")
     hashes = []
     for tx in initial_funding:
+        # avoid using send_and_confirm_raw_transaction here because it waits for each tx
+        # before sending another one, and is thus slower
         hashes.append(transaction.send_raw_transaction(tx['signed-raw-tx'], endpoint=test_net))
+    # instead make sure all txs are correctly posted later
+    print("Confirming transactions")
     for hash in hashes:
         tx_response = transaction.get_transaction_by_hash(hash, endpoint=test_net)
         if tx_response is not None:
             if tx_response[ 'blockHash' ] != '0x0000000000000000000000000000000000000000000000000000000000000000':
                 continue
+    time.sleep(0.5)
     print("Done")
 else:
     print("Node didn't start in {} seconds, consider restarting it".format(timeout))
