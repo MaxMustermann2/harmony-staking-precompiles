@@ -8,6 +8,7 @@ from pyhmy.util import convert_one_to_hex
 load_dotenv('.env')
 pk = getenv('private_key')
 test_net = getenv('test_net')
+test_net_shard1 = getenv('test_net_shard1')
 w3 = Web3(Web3.HTTPProvider(test_net))
 accounts.add(pk)
 #derived from pk
@@ -29,4 +30,5 @@ validator_info = {
   'bls-key-sigs': ['0x68f800b6adf657b674903e04708060912b893b7c7b500788808247550ab3e186e56a44ebf3ca488f8ed1a42f6cef3a04bd5d2b2b7eb5a767848d3135b362e668ce6bba42c7b9d5666d8e3a83be707b5708e722c58939fe9b07c170f3b7062414']
 }
 amount = w3.toWei(Decimal('100'), 'ether')
+gas_limit = w3.toWei(Decimal('0.00012'), 'gwei')    # trial and error
 victim_address = convert_one_to_hex('one1zksj3evekayy90xt4psrz8h6j2v3hla4qwz4ur')
