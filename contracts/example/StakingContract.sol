@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import { StakingPrecompiles, Description, CommissionRate, Directive } from "../lib/StakingPrecompiles.sol";
+import { StakingPrecompiles, Directive } from "../lib/StakingPrecompiles.sol";
 
 contract StakingContract is StakingPrecompiles {
 

@@ -1,20 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-struct Description {
-    string name;
-    string identity;
-    string website;
-    string securityContact;
-    string details;
-}
-
-struct CommissionRate {
-    string rate;
-    string maxRate;
-    string maxChangeRate;
-}
-
 enum Directive{
         CREATE_VALIDATOR, // unused
         EDIT_VALIDATOR,   // unused
