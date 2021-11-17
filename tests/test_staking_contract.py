@@ -277,7 +277,7 @@ def deploy_and_fund_malicious_contract():
 def test_many_calls_success():
     global multiple_calls_contract
     multiple_calls_contract = deploy_multiple_calls_contract()
-    how_many = 3200
+    how_many = int(80000000 / 25000) # block gas limit / tx gas limit
     print("Attempting {} precompile calls to check block time".format(how_many))
     nonce = account.get_account_nonce(validator_address, 'latest', endpoint=test_net)
     tx = multiple_calls_contract.multipleCollectRewards(how_many,
