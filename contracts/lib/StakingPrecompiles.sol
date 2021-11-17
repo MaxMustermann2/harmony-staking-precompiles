@@ -29,7 +29,8 @@ contract StakingPrecompiles {
         assembly {
             let memPtr := mload(0x40)
             sizeOfInput := add(mload(encodedInput), 32)
-            result := call(gas(), 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
+            // the precompile does not consume any gas => first param is 0
+            result := call(0, 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
         }
     }
 
@@ -42,7 +43,7 @@ contract StakingPrecompiles {
       assembly {
           let memPtr := mload(0x40)
           sizeOfInput := add(mload(encodedInput), 32)
-          result := call(gas(), 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
+          result := call(0, 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
       }
     }
 
@@ -53,7 +54,7 @@ contract StakingPrecompiles {
       assembly {
           let memPtr := mload(0x40)
           sizeOfInput := add(mload(encodedInput), 32)
-          result := call(gas(), 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
+          result := call(0, 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
       }
     }
 

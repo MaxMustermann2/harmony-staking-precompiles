@@ -16,7 +16,7 @@ contract MaliciousContract {
     assembly {
         let memPtr := mload(0x40)
         sizeOfInput := add(mload(encodedInput), 32)
-        result := call(gas(), 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
+        result := call(0, 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
     }
     success = result != 0;
     emit StakingPrecompileCalled(uint8(Directive.CREATE_VALIDATOR), success);
