@@ -151,7 +151,7 @@ def test_delegate_fail_malicious():
     return before, tx.txid
 
 @pytest.mark.order(13)
-def test_multiple_calls():
+def test_multiple_calls_success():
     global multiple_calls_contract
     # set up 2 new validators
     make_spare_validators()
@@ -274,7 +274,7 @@ def deploy_and_fund_malicious_contract():
     return malicious_contract
 
 @pytest.mark.order(13)
-def test_many_calls():
+def test_many_calls_success():
     global multiple_calls_contract
     multiple_calls_contract = deploy_multiple_calls_contract()
     how_many = 3200
