@@ -1,14 +1,8 @@
 import pytest
 from brownie import StakingContract, MaliciousContract, MultipleCallsContract, accounts
-from brownie.test.managers.runner import RevertContextManager as reverts
 from utils.constants import *
-from pyhmy import account, transaction, staking, signing
+from pyhmy import account, transaction, staking, signing, blockchain
 from pyhmy.validator import Validator
-from pyhmy.numbers import convert_one_to_atto
-from brownie.exceptions import VirtualMachineError
-from pprint import pprint
-
-first_validator_created = False
 
 def print_gas_consumed(func):
     def inner1(*args, **kwargs):
