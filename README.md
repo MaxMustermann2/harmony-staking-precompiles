@@ -41,5 +41,6 @@ The following tests are designed to cover the edge cases of staking, and do not 
 1. `CollectRewards` when there are no other rewards to collect
 1. Malicious contracts attempting to `Delegate` / `Undelegate` / `CollectRewards` from accounts other than themselves will result in a failure (`test_delegate_fail_malicious` in `test_staking_contract.py`)
 1. Multiple calls to the staking precompile in one transaction (made via Solidity code in `MultipleCallsContract.sol`)
+1. Assessing the impact to the block time with maximum possible number of calls to the precompile (`test_many_calls_success`)
 
 Correctly formed transactions (those which end with `_success` go through), and are part of the tests in this repository.
