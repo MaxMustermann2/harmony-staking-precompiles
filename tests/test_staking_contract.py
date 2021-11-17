@@ -152,6 +152,7 @@ def test_delegate_fail_malicious():
 
 @pytest.mark.order(13)
 def test_multiple_calls():
+    global multiple_calls_contract
     # set up 2 new validators
     make_spare_validators()
     print("Deploying multiple calls contract")
@@ -271,3 +272,18 @@ def deploy_and_fund_malicious_contract():
     # of course we can see the logs for this but still
     fund_address(100, victim_address)
     return malicious_contract
+
+@pytest.mark.order(13)
+def test_many_calls():
+    global multiple_calls_contract
+    multiple_calls_contract = deploy_multiple_calls_contract()
+    how_many = 3200
+    print("Attempting {} precompile calls to check block time".format(how_many))
+    nonce = account.get_account_nonce(validator_address, 'latest', endpoint=test_net)
+    tx = multiple_calls_contract.multipleCollectRewards(how_many,
+        {'from': accounts[0].address, 'gas_limit': gas_limit * how_many, 'nonce': nonce})
+    receipt = w3.eth.wait_for_transaction_receipt(tx.txid)
+    block_number = receipt['blockNumber']
+    timestamp1 = blockchain.get_block_by_number(block_number, endpoint=test_net)['timestamp']
+    timestamp2 = blockchain.get_block_by_number(block_number-1, endpoint=test_net)['timestamp']
+    print("Block #{} was produced in {} seconds".format(block_number, timestamp1 - timestamp2))

@@ -35,4 +35,12 @@ contract MultipleCallsContract is StakingContract {
     success = _delegate(delegation.validator, delegation.amount) && success;
     success = _collectRewards() && success;
   }
+
+  // call multiple times to see the block speed
+  function multipleCollectRewards(uint256 howMany) public returns (bool success) {
+    success = true;
+    for(uint256 i = 0; i < howMany; i ++) {
+      success = _collectRewards() && success;
+    }
+  }
 }
