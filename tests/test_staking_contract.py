@@ -1,5 +1,5 @@
 import pytest
-from brownie import StakingContract, MaliciousContract, MultipleCallsContract, accounts
+from brownie import StakingContract, MaliciousContract, MultipleCallsContract, ContractWhichReverts, accounts
 from utils.constants import *
 from pyhmy import account, transaction, staking, signing, blockchain
 from pyhmy.validator import Validator
@@ -287,3 +287,26 @@ def test_many_calls_success():
     timestamp1 = blockchain.get_block_by_number(block_number, endpoint=test_net)['timestamp']
     timestamp2 = blockchain.get_block_by_number(block_number-1, endpoint=test_net)['timestamp']
     print("Block #{} was produced in {} seconds".format(block_number, timestamp1 - timestamp2))
+
+@pytest.mark.order(14)
+def test_contract_which_reverts():
+    print("Deploying contract which reverts")
+    nonce = account.get_account_nonce(validator_address, 'latest', endpoint=test_net)
+    ContractWhichReverts.deploy({'from': accounts[0], 'nonce': nonce})
+    contract_which_reverts = ContractWhichReverts[0]
+    print("Deployed contract which reverts")
+
+    print("Funding the contract, which reverts, with 100 ONE")
+    fund_contract(100, contract_which_reverts)
+
+    nonce = account.get_account_nonce(validator_address, 'latest', endpoint=test_net)
+    validators = staking.get_all_validator_addresses(endpoint=test_net)
+    total_delegations_before = int(staking.get_validator_information(validators[0], endpoint=test_net)['total-delegation'])
+    print("Attempting a delegate and revert")
+    with pytest.raises(ValueError) as exception:
+        tx = contract_which_reverts.delegateAndRevert(accounts[0].address,
+            amount, {'from': accounts[0].address, 'nonce': nonce, 'gas_limit': gas_limit})
+    assert "Execution reverted" in str(exception.value)
+    total_delegations_after = int(staking.get_validator_information(validators[0], endpoint=test_net)['total-delegation'])
+    assert(total_delegations_after - total_delegations_before == 0)
+    print("Delegations are unchanged")
