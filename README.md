@@ -2,7 +2,7 @@
 [Gitcoin Bounty](https://gitcoin.co/issue/harmony-one/bounties/77/100026734)
 
 ### Running the tests
-1. Download required python dependencies
+1. Download required Python dependencies. This repository has been tested with Python3.9
 ```bash
 pip install -r requirements.txt
 ```
