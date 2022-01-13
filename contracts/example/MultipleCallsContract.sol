@@ -1,7 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import { StakingContract, Directive } from "./StakingContract.sol";
+import { StakingContract } from "./StakingContract.sol";
+import { StakingPrecompilesSelectors } from "../lib/StakingPrecompiles.sol";
 
 contract MultipleCallsContract is StakingContract {
   struct Delegation {
@@ -37,10 +38,29 @@ contract MultipleCallsContract is StakingContract {
   }
 
   // call multiple times to see the block speed
-  function multipleCollectRewards(uint256 howMany) public returns (bool success) {
-    success = true;
+  // assembly is used directly to save gas
+  // allowing for larger number of calls
+  function multipleCollectRewards(uint256 howMany) public {
+    bytes memory encodedInput = abi.encodeWithSelector(StakingPrecompilesSelectors.CollectRewards.selector,
+                                    address(this));
+    bytes32 sizeOfInput;
+    bytes32 memPtr;
+    uint256 ignored;
+    assembly {
+      sizeOfInput := mload(encodedInput)
+      memPtr := mload(0x40)
+    }
     for(uint256 i = 0; i < howMany; i ++) {
-      success = _collectRewards() && success;
+      assembly {
+        ignored := call(25000,
+          0xfc,
+          0x0,
+          add(encodedInput, 32),
+          sizeOfInput,
+          memPtr,
+          0x20
+        )
+      }
     }
   }
 }

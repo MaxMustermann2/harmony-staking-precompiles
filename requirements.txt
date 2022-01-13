@@ -1,4 +1,4 @@
-eth-brownie>=1.10.0,<2.0.0
+https://github.com/MaxMustermann2/brownie/archive/refs/heads/no-bytecode-no-fail.zip
 https://github.com/MaxMustermann2/pyhmy/archive/refs/heads/validator-sigs.zip
 python-dotenv
 pytest-order

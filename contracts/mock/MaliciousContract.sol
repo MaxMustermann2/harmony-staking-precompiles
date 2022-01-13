@@ -11,14 +11,18 @@ contract MaliciousContract {
                                     victimAddress,
                                     validatorAddress,
                                     amount);
-    bytes32 sizeOfInput;
     uint256 result;
     assembly {
-        let memPtr := mload(0x40)
-        sizeOfInput := add(mload(encodedInput), 32)
-        result := call(0, 0xfc, 0x0, encodedInput, sizeOfInput, memPtr, 0x20)
+      result := call(25000,
+        0xfc,
+        0x0,
+        add(encodedInput, 32),
+        mload(encodedInput),
+        mload(0x40),
+        0x20
+      )
     }
     success = result != 0;
-    emit StakingPrecompileCalled(uint8(Directive.CREATE_VALIDATOR), success);
+    emit StakingPrecompileCalled(uint8(Directive.DELEGATE), success);
   }
 }
