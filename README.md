@@ -15,7 +15,7 @@ cd harmony
 ```bash
 make debug
 ```
-4. Update `.env` with the node API endpoint, and source it
+4. Update `.env` with the node API endpoints, and source it
 ```bash
 source .env
 ```

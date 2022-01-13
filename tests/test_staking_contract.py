@@ -10,6 +10,7 @@ from eth_utils import to_checksum_address
 from pyhmy import (
     account,
     blockchain,
+    contract,
     numbers,
     signing,
     staking,
@@ -61,6 +62,7 @@ def setup():
     if shard != 0:
         pytest.exit( f"Shard needs to be 0, got {shard}" )
     print( "Node is booted up" )
+    return
     StakingContract.deploy( { 'from': accounts[ 0 ] } )
     staking_contract = StakingContract[ 0 ]
     print( "Main staking contract is at {}".format( staking_contract.address ) )
@@ -812,8 +814,8 @@ def test_eoa_subsidize_success():
 
 @pytest.mark.order( 17 )
 def test_shard_1_fail():
-    endpoint_shard_1 = 'http://localhost:9598'
-    assert blockchain.get_shard( endpoint_shard_1 ) == 1
+    endpoint_shard1 = os.getenv( 'endpoint_shard1' )
+    assert blockchain.get_shard( endpoint_shard1 ) == 1
     assert blockchain.get_shard( endpoint ) == 0
     if blockchain.get_current_epoch( endpoint ) < 2:
         pytest.skip( "Skipped cross shard test as epoch < 2" )
@@ -824,7 +826,7 @@ def test_shard_1_fail():
         'chainId': 2,
         'data': StakingContract.bytecode,
         'from': accounts[ 0 ].address,
-        'gas': 1000000,
+        'gas': once_gas_limit * 15,  # contract creation
         'gasPrice': int( 1e9 ),
         'nonce': account.get_account_nonce(
             accounts[ 0 ].address,
@@ -843,6 +845,12 @@ def test_shard_1_fail():
         ctx_hash,
         endpoint
     )[ 'contractAddress' ]
+    deployed_code = contract.get_code(
+        util.convert_one_to_hex( contract_address ),
+        'latest',
+        endpoint = endpoint
+    )
+    assert len( deployed_code ) > 2, "Could not deploy contract"
     print( f"Contract deployed at {contract_address} on shard 1" )
     staking_contract_w3 = w3.eth.contract(
         abi = StakingContract.abi,
@@ -858,10 +866,10 @@ def test_shard_1_fail():
                 'latest',
                 endpoint = endpoint
             ),
-            'gasPrice': int(1e9),
-            'gas': 250000,  # extra for cross shard
+            'gasPrice': int( 1e9 ),
+            'gas': once_gas_limit * 2,
             'chainId': 2,
-            'shardID': 0,   # origin shard
+            'shardID': 0,
             'toShardID': 1,
             'value': protocol_min_delegation,
         }
@@ -877,11 +885,11 @@ def test_shard_1_fail():
     while cx_receipt is None:
         cx_receipt = transaction.get_cx_receipt_by_hash(
             cx_hash,
-            endpoint_shard_1
+            endpoint_shard1
         )
     balance = account.get_balance(
         contract_address,
-        endpoint = endpoint_shard_1
+        endpoint = endpoint_shard1
     )
     assert balance == protocol_min_delegation
     print( "Delegating for contract on shard 1" )
@@ -893,12 +901,12 @@ def test_shard_1_fail():
             'nonce': account.get_account_nonce(
                 accounts[ 0 ].address,
                 'latest',
-                endpoint = endpoint_shard_1
+                endpoint = endpoint_shard1
             ),
-            'gasPrice': int(1e9),
-            'gas': 250000,  # extra for cross shard
+            'gasPrice': int( 1e9 ),
+            'gas': once_gas_limit * 2,
             'chainId': 2,
-            'shardID': 1,   # origin shard
+            'shardID': 1,
             'toShardID': 1,
             'value': 0,
         }
@@ -906,19 +914,14 @@ def test_shard_1_fail():
     signed_tx = signing.sign_transaction( tx_dict, pk )
     tx_hash = transaction.send_and_confirm_raw_transaction(
         signed_tx.rawTransaction.hex(),
-        endpoint = endpoint_shard_1
+        endpoint = endpoint_shard1
     )[ 'hash' ]
     balance = account.get_balance(
         contract_address,
-        endpoint = endpoint_shard_1
+        endpoint = endpoint_shard1
     )
     assert balance == protocol_min_delegation
     print( "As expected, delegation on shard 1 did not go through" )
-
-    # TODO check if logs here are suppoed to be empty
-    # w3_shard1 = Web3( Web3.HTTPProvider( endpoint_shard_1 ) )
-    # receipt = w3_shard1.eth.wait_for_transaction_receipt( tx_hash )
-    # logs = staking_contract_w3.events.StakingPrecompileCalled().processReceipt(receipt)
 
     print( "Delegating for contract on shard 0" )
     tx_dict_funding[ 'toShardID' ] = 0
