@@ -6,24 +6,32 @@
 ```bash
 pip install -r requirements.txt
 ```
-2. Clone the forked harmony repository
+1. Clone the forked harmony repository
 ```bash
 git clone https://github.com/MaxMustermann2/harmony
 cd harmony
 ```
-3. Run the (modified) node
+1. Run the (modified) node
 ```bash
 make debug
 ```
-4. Update `.env` with the node API endpoints, and source it
+Note the value of the string after bootnode `bootnodeString`, used in the next step
+```
+bootnode launched. +  /ip4/127.0.0.1/tcp/19876/p2p/xxxxxxxxxxxxxxxxxxx
+```
+1. Run a validator node from the `harmony` folder using the key and the password file in this repository. This is needed to verify the `CollectRewards` precompile
+```bash
+./bin/harmony --log-folder logs --min-peers 3 --bootnodes /ip4/127.0.0.1/tcp/19876/p2p/<bootnodeString> --network_type=localnet --dns=false --verbosity=3 --p2p.security.max-conn-per-ip=100 --ip 127.0.0.1 --port 9110 --db_dir ./test/../db-127.0.0.1-9110 --broadcast_invalid_tx=false --http.ip=0.0.0.0 --ws.ip=0.0.0.0 --bls.keys /path/to/harmony-staking-precompiles/bls/0.key --run validator --bls.maxkeys 1 --bls.pass.src file --bls.pass.file /path/to/harmony-staking-precompiles/bls/blspass.txt
+```
+1. Update `.env` with the node API endpoints, and source it
 ```bash
 source .env
 ```
-5. Add the network to brownie
+1. Add the network to brownie
 ```bash
 brownie networks add live private host=${test_net} chainid=2
 ```
-6. Run `./cleanandtest.sh`
+1. Run `./cleanandtest.sh`
 
 ### Project Structure
 `StakingContract.sol` implements the `StakingPrecompiles.sol` library, which can be inherited and used to call the staking precompiles from any contract. In other words, a sample contract which uses `StakingPrecompiles.sol` to call the staking precompiles is available as `StakingContract.sol`.

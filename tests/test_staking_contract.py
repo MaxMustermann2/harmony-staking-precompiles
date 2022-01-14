@@ -42,18 +42,25 @@ def setup():
     accounts.add( pk )
     print( f"Waiting for node at {endpoint} to boot up" )
     current_block_num = 0
-    timeout = 60
+    current_epoch = 0
+    wanted_epoch = 2  # staking epoch
+    timeout = 90  # epoch 2 is 14, so ~30 seconds for that
     start_time = time.time()
     shard = -1
     while (
         ( shard == 0 or shard == -1 ) and ( current_block_num == 0 ) and
-        ( time.time() - start_time ) <= timeout
+        ( ( time.time() - start_time ) <= timeout ) and
+        ( current_epoch < wanted_epoch )
     ):
         try:
             if shard == -1:
                 shard = blockchain.get_shard( endpoint = endpoint )
             current_block_num = blockchain.get_block_number( endpoint )
-            print( f"Last block number = {current_block_num}" )
+            current_epoch = blockchain.get_current_epoch( endpoint )
+            print(
+                f"Current block number = {current_block_num}\n" +
+                f"Current epoch number = {current_epoch}"
+            )
         except:
             pass
         time.sleep( 1 )
@@ -62,7 +69,6 @@ def setup():
     if shard != 0:
         pytest.exit( f"Shard needs to be 0, got {shard}" )
     print( "Node is booted up" )
-    return
     StakingContract.deploy( { 'from': accounts[ 0 ] } )
     staking_contract = StakingContract[ 0 ]
     print( "Main staking contract is at {}".format( staking_contract.address ) )
@@ -79,7 +85,10 @@ def test_collect_rewards_fail_before_create_validator():
         }
     )
     receipt = w3.eth.wait_for_transaction_receipt( tx.txid )
-    assert ( int( receipt[ 'logs' ][ 0 ][ 'data' ][ -1 : ] ) == 0 )
+    # no rewards to collect
+    # check the last event as a successful tx produces one extra event
+    # which goes as the first one
+    assert ( int( receipt[ 'logs' ][ -1 ][ 'data' ][ -1 : ] ) == 0 )
     print( f"Gas consumed is {tx.gas_used}" )
 
 
@@ -122,9 +131,7 @@ def test_undelegate_fail_before_create_validator():
 @pytest.mark.order( 4 )
 def test_delegate_fail_not_funded():
     # create the validator
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
-    if validator_address not in validators:
-        create_validator( validator_address, validator_info, pk )
+    create_validator( validator_address, validator_info, pk )
     # now the test
     nonce = account.get_account_nonce(
         validator_address,
@@ -191,15 +198,21 @@ def test_delegate_fail_invalid_validator():
 
 @pytest.mark.order( 7 )
 def test_delegate_success():
+    balance = account.get_balance(
+        staking_contract.address,
+        endpoint = endpoint
+    )
+    if balance == 0:
+        # useful if called via -k
+        fund_contract( 100, staking_contract )
     nonce = account.get_account_nonce(
         validator_address,
         'latest',
         endpoint = endpoint
     )
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     total_delegations_before = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -216,7 +229,7 @@ def test_delegate_success():
     assert ( int( receipt[ 'logs' ][ 0 ][ 'data' ][ -1 : ] ) == 1 )
     total_delegations_after = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -269,17 +282,16 @@ def test_undelegate_fail_amount_gt_delegated():
     print( f"Gas consumed is {tx.gas_used}" )
 
 
-@pytest.mark.order( 10 )
+@pytest.mark.order( 11 )
 def test_undelegate_success():
     nonce = account.get_account_nonce(
         validator_address,
         'latest',
         endpoint = endpoint
     )
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     total_delegations_before = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -296,7 +308,7 @@ def test_undelegate_success():
     assert ( int( receipt[ 'logs' ][ 0 ][ 'data' ][ -1 : ] ) == 1 )
     total_delegations_after = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -307,8 +319,48 @@ def test_undelegate_success():
     print( f"Gas consumed is {tx.gas_used}" )
 
 
-@pytest.mark.order( 11 )
+@pytest.mark.order( 10 )
 def test_collect_rewards_success():
+    # check for delegation (useful if running via -k)
+    result = staking.get_delegation_by_delegator_and_validator(
+        staking_contract.address,
+        validator_address,
+        endpoint = endpoint
+    )
+    if not result:
+        print( "Delegating because it is missing" )
+        test_delegate_success()
+    print( "Waiting for rewards to show up" )
+    start_block = blockchain.get_block_number( endpoint = endpoint )
+    end_block = start_block
+    reward = 0
+    validator_reward = staking.get_delegation_by_delegator_and_validator(
+        validator_address,
+        validator_address,
+        endpoint = endpoint
+    )[ 'reward' ]
+    # rewards are distributed every 63/64 blocks, keep double that as a margin
+    while ( reward == 0 and end_block - start_block <= 128 ):
+        result = staking.get_delegation_by_delegator_and_validator(
+            staking_contract.address,
+            validator_address,
+            endpoint = endpoint
+        )
+        reward = result[ 'reward' ]
+        end_block = blockchain.get_block_number( endpoint = endpoint )
+        time.sleep( 2 )
+    if reward != 0:
+        print( "We have rewards now" )
+    else:
+        current_validator_reward = staking.get_delegation_by_delegator_and_validator(
+            validator_address,
+            validator_address,
+            endpoint = endpoint
+        )[ 'reward' ]
+        if current_validator_reward == validator_reward:
+            pytest.fail( "The validator is not running" )
+        else:
+            pytest.fail( "The validator running, unknown reason" )
     nonce = account.get_account_nonce(
         validator_address,
         'latest',
@@ -322,9 +374,12 @@ def test_collect_rewards_success():
         }
     )
     receipt = w3.eth.wait_for_transaction_receipt( tx.txid )
-    assert (
-        int( receipt[ 'logs' ][ 0 ][ 'data' ][ -1 : ] ) == 0
-    )  # should fail since there are no rewards to collect yet
+    assert ( int( receipt[ 'logs' ][ -1 ][ 'data' ][ -1 : ] ) == 1 )
+    balance = account.get_balance(
+        staking_contract.address,
+        endpoint = endpoint
+    )
+    assert balance == reward
     print( f"Gas consumed is {tx.gas_used}" )
 
 
@@ -402,7 +457,7 @@ def test_multiple_calls_success():
         assert ( int( receipt[ 'logs' ][ i ][ 'data' ][ -1 : ] ) == 1 )
     assert (
         int( receipt[ 'logs' ][ len( delegations ) ][ 'data' ][ -1 : ] ) == 0
-    )  # collect rewards (no rewards to collect)
+    )  # collect rewards (no rewards to collect immediately)
     # now undelegate from second validator, and delegate to first (both equal amounts)
     # note that the balance which is undelegated is not immediately available for redelegation
     # such a redelegation can only be made after close of the epoch
@@ -538,9 +593,14 @@ def fund_address( how_much, address, **kwargs ):
 
 def create_validator( address, info, private_key ):
     # address must be a bech32 (one...) address
-    print(
-        "Creating the validator at {} using the Harmony SDK".format( address )
-    )
+    validators = staking.get_all_validator_addresses( endpoint = endpoint )
+    if address in validators:
+        return
+    balance = account.get_balance( address, endpoint = endpoint )
+    if balance < numbers.convert_one_to_atto( 10050 ):
+        # 10k self delegation + some for gas
+        fund_address( 10050, util.convert_one_to_hex( address ) )
+    print( "Creating the validator at {} using pyhmy".format( address ) )
     validators = staking.get_all_validator_addresses( endpoint = endpoint )
     original_count = len( validators )
     validator = validator_module.Validator( address )
@@ -584,15 +644,9 @@ def create_validator( address, info, private_key ):
 
 def make_spare_validators():
     print( "Making spare validators" )
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     for addr, info, private_key in zip( spare_validators, spare_validator_infos,
                                        spare_validator_pks ):
-        if addr not in validators:
-            # 10k self delegation + some for gas
-            fund_address( 10050, util.convert_one_to_hex( addr ) )
-            print( "Funding validator {}".format( addr ) )
-            print( "Creating validator {}".format( addr ) )
-            create_validator( addr, info, private_key )
+        create_validator( addr, info, private_key )
 
 
 def deploy_and_fund_malicious_contract():
@@ -679,7 +733,7 @@ def test_contract_which_reverts_success():
     validators = staking.get_all_validator_addresses( endpoint = endpoint )
     total_delegations_before = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -697,7 +751,7 @@ def test_contract_which_reverts_success():
     assert "Execution reverted" in str( exception.value )
     total_delegations_after = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -730,7 +784,7 @@ def test_eoa_access_success():
     validators = staking.get_all_validator_addresses( endpoint = endpoint )
     total_delegations_before = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -747,7 +801,7 @@ def test_eoa_access_success():
     receipt = w3.eth.wait_for_transaction_receipt( tx.txid )
     total_delegations_after = int(
         staking.get_validator_information(
-            validators[ 0 ],
+            validator_address,
             endpoint = endpoint
         )[ 'total-delegation' ]
     )
@@ -816,7 +870,6 @@ def test_eoa_subsidize_success():
 def test_shard_1_fail():
     endpoint_shard1 = os.getenv( 'endpoint_shard1' )
     assert blockchain.get_shard( endpoint_shard1 ) == 1
-    assert blockchain.get_shard( endpoint ) == 0
     if blockchain.get_current_epoch( endpoint ) < 2:
         pytest.skip( "Skipped cross shard test as epoch < 2" )
     # brownie would need a new network and new balance on shard 1
@@ -893,6 +946,12 @@ def test_shard_1_fail():
     )
     assert balance == protocol_min_delegation
     print( "Delegating for contract on shard 1" )
+    total_delegations_before = int(
+        staking.get_validator_information(
+            validator_address,
+            endpoint = endpoint  # call on beacon shard
+        )[ 'total-delegation' ]
+    )
     tx_dict = staking_contract_w3.functions._delegate(
         accounts[ 0 ].address,
         protocol_min_delegation
@@ -920,6 +979,13 @@ def test_shard_1_fail():
         contract_address,
         endpoint = endpoint_shard1
     )
+    total_delegations_after = int(
+        staking.get_validator_information(
+            validator_address,
+            endpoint = endpoint
+        )[ 'total-delegation' ]
+    )
+    assert total_delegations_after == total_delegations_before
     assert balance == protocol_min_delegation
     print( "As expected, delegation on shard 1 did not go through" )
 
@@ -943,10 +1009,26 @@ def test_shard_1_fail():
         endpoint = endpoint
     )
     signed_tx = signing.sign_transaction( tx_dict, pk )
+    total_delegations_before = int(
+        staking.get_validator_information(
+            validator_address,
+            endpoint = endpoint
+        )[ 'total-delegation' ]
+    )
     tx_hash = transaction.send_and_confirm_raw_transaction(
         signed_tx.rawTransaction.hex(),
         endpoint = endpoint
     )[ 'hash' ]
     balance = account.get_balance( contract_address, endpoint = endpoint )
+    total_delegations_after = int(
+        staking.get_validator_information(
+            validator_address,
+            endpoint = endpoint
+        )[ 'total-delegation' ]
+    )
     assert balance == 0
+    assert (
+        total_delegations_after -
+        total_delegations_before == protocol_min_delegation
+    )
     print( "Delegation on shard 0 went through" )
