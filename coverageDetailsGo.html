@@ -69,7 +69,7 @@
 				
 				<option value="file6">github.com/harmony-one/harmony/core/tx_pool.go (61.0%)</option>
 				
-				<option value="file7">github.com/harmony-one/harmony/core/vm/contracts.go (77.6%)</option>
+				<option value="file7">github.com/harmony-one/harmony/core/vm/contracts.go (77.4%)</option>
 				
 				<option value="file8">github.com/harmony-one/harmony/core/vm/contracts_write.go (81.2%)</option>
 				
@@ -81,7 +81,7 @@
 				
 				<option value="file12">github.com/harmony-one/harmony/internal/params/config.go (60.4%)</option>
 				
-				<option value="file13">github.com/harmony-one/harmony/node/worker/worker.go (42.3%)</option>
+				<option value="file13">github.com/harmony-one/harmony/node/worker/worker.go (42.5%)</option>
 				
 				<option value="file14">github.com/harmony-one/harmony/rosetta/services/construction_check.go (23.4%)</option>
 				
@@ -4281,8 +4281,8 @@ func (p *StateProcessor) Process(
                 usedGas        = new(uint64)
                 header         = block.Header()
                 allLogs        []*types.Log
-                gp             = new(GasPool).AddGas(block.GasLimit())
-                blockStakeMsgs []staking.StakeMsg
+                gp                                = new(GasPool).AddGas(block.GasLimit())
+                blockStakeMsgs []staking.StakeMsg = make([]staking.StakeMsg, 0)
         )
 
         beneficiary, err := p.bc.GetECDSAFromCoinbase(header)
@@ -4304,7 +4304,7 @@ func (p *StateProcessor) Process(
                 if cxReceipt != nil </span><span class="cov0" title="0">{
                         outcxs = append(outcxs, cxReceipt)
                 }</span>
-                <span class="cov0" title="0">if stakeMsgs != nil </span><span class="cov0" title="0">{
+                <span class="cov0" title="0">if len(stakeMsgs) &gt; 0 </span><span class="cov0" title="0">{
                         blockStakeMsgs = append(blockStakeMsgs, stakeMsgs...)
                 }</span>
                 <span class="cov0" title="0">allLogs = append(allLogs, receipt.Logs...)</span>
@@ -6769,6 +6769,11 @@ func init() <span class="cov8" title="1">{
                         panic(fmt.Errorf("Address %v is included in both readOnlyContracts and writeCapableContracts", address))</span>
                 }
         }
+        <span class="cov8" title="1">for address, writeCapableContract := range writeCapableContracts </span><span class="cov8" title="1">{
+                if writeCapableContract != nil &amp;&amp; readOnlyContracts[address] != nil </span><span class="cov0" title="0">{
+                        panic(fmt.Errorf("Address %v is included in both readOnlyContracts and writeCapableContracts", address))</span>
+                }
+        }
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -9085,7 +9090,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              big.NewInt(0),
-                StakingPrecompileEpoch:     big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(2), // same as staking
         }
 
         // PartnerChainConfig contains the chain parameters for the Partner network.
@@ -9119,7 +9124,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              big.NewInt(0),
-                StakingPrecompileEpoch:     big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(2),
         }
 
         // StressnetChainConfig contains the chain parameters for the Stress test network.
@@ -9153,7 +9158,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              big.NewInt(0),
-                StakingPrecompileEpoch:     big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(2),
         }
 
         // LocalnetChainConfig contains the chain parameters to run for local development.
@@ -9186,7 +9191,7 @@ var (
                 ReceiptLogEpoch:            big.NewInt(0),
                 SHA3Epoch:                  big.NewInt(0),
                 HIP6And8Epoch:              EpochTBD, // Never enable it for localnet as localnet has no external validator setup
-                StakingPrecompileEpoch:     big.NewInt(0),
+                StakingPrecompileEpoch:     big.NewInt(2),
         }
 
         // AllProtocolChanges ...
@@ -9663,6 +9668,7 @@ type environment struct {
         outcxs     []*types.CXReceipt       // cross shard transaction receipts (source shard)
         incxs      []*types.CXReceiptsProof // cross shard receipts and its proof (desitinatin shard)
         slashes    slash.Records
+        stakeMsgs  []staking.StakeMsg
 }
 
 // Worker is the main object which takes care of submitting new work to consensus engine
@@ -9840,7 +9846,7 @@ func (w *Worker) commitTransaction(
 ) error <span class="cov8" title="1">{
         snap := w.current.state.Snapshot()
         gasUsed := w.current.header.GasUsed()
-        receipt, cx, _, _, err := core.ApplyTransaction(
+        receipt, cx, stakeMsgs, _, err := core.ApplyTransaction(
                 w.config,
                 w.chain,
                 &amp;coinbase,
@@ -9867,6 +9873,7 @@ func (w *Worker) commitTransaction(
         <span class="cov8" title="1">w.current.txs = append(w.current.txs, tx)
         w.current.receipts = append(w.current.receipts, receipt)
         w.current.logs = append(w.current.logs, receipt.Logs...)
+        w.current.stakeMsgs = append(w.current.stakeMsgs, stakeMsgs...)
 
         if cx != nil </span><span class="cov0" title="0">{
                 w.current.outcxs = append(w.current.outcxs, cx)
@@ -9947,6 +9954,7 @@ func (w *Worker) GetCurrentResult() *core.ProcessorResult <span class="cov0" tit
                 UsedGas:    w.current.header.GasUsed(),
                 Reward:     w.current.reward,
                 State:      w.current.state,
+                StakeMsgs:  w.current.stakeMsgs,
         }
 }</span>
 
@@ -10930,7 +10938,7 @@ func (v Delegate) Equals(s Delegate) bool <span class="cov8" title="1">{
         <span class="cov8" title="1">if v.Amount == nil </span><span class="cov0" title="0">{
                 return s.Amount == nil
         }</span>
-        <span class="cov8" title="1">return s.Amount != nil &amp;&amp; v.Amount.Cmp(s.Amount) == 0</span>        // pointer
+        <span class="cov8" title="1">return s.Amount != nil &amp;&amp; v.Amount.Cmp(s.Amount) == 0</span> // pointer
 }
 
 // Undelegate - type for removing delegation responsibility
@@ -10968,7 +10976,7 @@ func (v Undelegate) Equals(s Undelegate) bool <span class="cov8" title="1">{
         <span class="cov8" title="1">if v.Amount == nil </span><span class="cov0" title="0">{
                 return s.Amount == nil
         }</span>
-        <span class="cov8" title="1">return s.Amount != nil &amp;&amp; v.Amount.Cmp(s.Amount) == 0</span>        // pointer
+        <span class="cov8" title="1">return s.Amount != nil &amp;&amp; v.Amount.Cmp(s.Amount) == 0</span> // pointer
 }
 
 // CollectRewards - type for collecting token rewards
