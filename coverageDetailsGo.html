@@ -59,35 +59,37 @@
 				
 				<option value="file1">github.com/harmony-one/harmony/core/chain_makers.go (0.0%)</option>
 				
-				<option value="file2">github.com/harmony-one/harmony/core/evm.go (65.1%)</option>
+				<option value="file2">github.com/harmony-one/harmony/core/evm.go (65.8%)</option>
 				
 				<option value="file3">github.com/harmony-one/harmony/core/offchain.go (29.8%)</option>
 				
-				<option value="file4">github.com/harmony-one/harmony/core/state_processor.go (49.6%)</option>
+				<option value="file4">github.com/harmony-one/harmony/core/staking_verifier.go (96.2%)</option>
 				
-				<option value="file5">github.com/harmony-one/harmony/core/state_transition.go (69.4%)</option>
+				<option value="file5">github.com/harmony-one/harmony/core/state_processor.go (49.6%)</option>
 				
-				<option value="file6">github.com/harmony-one/harmony/core/tx_pool.go (61.0%)</option>
+				<option value="file6">github.com/harmony-one/harmony/core/state_transition.go (69.4%)</option>
 				
-				<option value="file7">github.com/harmony-one/harmony/core/vm/contracts.go (77.4%)</option>
+				<option value="file7">github.com/harmony-one/harmony/core/tx_pool.go (61.0%)</option>
 				
-				<option value="file8">github.com/harmony-one/harmony/core/vm/contracts_write.go (81.2%)</option>
+				<option value="file8">github.com/harmony-one/harmony/core/vm/contracts.go (77.6%)</option>
 				
-				<option value="file9">github.com/harmony-one/harmony/core/vm/evm.go (36.1%)</option>
+				<option value="file9">github.com/harmony-one/harmony/core/vm/contracts_write.go (75.9%)</option>
 				
-				<option value="file10">github.com/harmony-one/harmony/core/vm/gas.go (63.3%)</option>
+				<option value="file10">github.com/harmony-one/harmony/core/vm/evm.go (37.9%)</option>
 				
-				<option value="file11">github.com/harmony-one/harmony/hmy/tracer.go (0.0%)</option>
+				<option value="file11">github.com/harmony-one/harmony/core/vm/gas.go (63.3%)</option>
 				
-				<option value="file12">github.com/harmony-one/harmony/internal/params/config.go (60.4%)</option>
+				<option value="file12">github.com/harmony-one/harmony/hmy/tracer.go (0.0%)</option>
 				
-				<option value="file13">github.com/harmony-one/harmony/node/worker/worker.go (42.5%)</option>
+				<option value="file13">github.com/harmony-one/harmony/internal/params/config.go (60.7%)</option>
 				
-				<option value="file14">github.com/harmony-one/harmony/rosetta/services/construction_check.go (23.4%)</option>
+				<option value="file14">github.com/harmony-one/harmony/node/worker/worker.go (42.5%)</option>
 				
-				<option value="file15">github.com/harmony-one/harmony/staking/precompile.go (89.7%)</option>
+				<option value="file15">github.com/harmony-one/harmony/rosetta/services/construction_check.go (23.4%)</option>
 				
-				<option value="file16">github.com/harmony-one/harmony/staking/types/messages.go (90.6%)</option>
+				<option value="file16">github.com/harmony-one/harmony/staking/precompile.go (88.0%)</option>
+				
+				<option value="file17">github.com/harmony-one/harmony/staking/types/messages.go (89.4%)</option>
 				
 				</select>
 			</div>
@@ -2858,13 +2860,14 @@ func (bc *BlockChain) prepareStakingMetaData(
         for _, stakeMsg := range stakeMsgs </span><span class="cov8" title="1">{
                 if delegate, ok := stakeMsg.(*staking.Delegate); ok </span><span class="cov8" title="1">{
                         if err := processDelegateMetadata(delegate,
-                                newValidators,
                                 newDelegations,
                                 state,
                                 bc,
                                 blockNum); err != nil </span><span class="cov8" title="1">{
                                 return nil, nil, err
                         }</span>
+                } else<span class="cov0" title="0"> {
+                        panic("Only *staking.Delegate stakeMsgs are supported at the moment")</span>
                 }
         }
         <span class="cov8" title="1">for _, txn := range block.StakingTransactions() </span><span class="cov0" title="0">{
@@ -2880,18 +2883,34 @@ func (bc *BlockChain) prepareStakingMetaData(
                 <span class="cov0" title="0">switch txn.StakingType() </span>{
                 case staking.DirectiveCreateValidator:<span class="cov0" title="0">
                         createValidator := decodePayload.(*staking.CreateValidator)
-                        if err := processCreateValidatorMetadata(createValidator,
-                                &amp;newValidators,
-                                newDelegations,
-                                bc,
-                                blockNum); err != nil </span><span class="cov0" title="0">{
-                                return nil, nil, err
+                        newList, appended := utils.AppendIfMissing(
+                                newValidators, createValidator.ValidatorAddress,
+                        )
+                        if !appended </span><span class="cov0" title="0">{
+                                return nil, nil, errValidatorExist
                         }</span>
+                        <span class="cov0" title="0">newValidators = newList
+
+                        // Add self delegation into the index
+                        selfIndex := staking.DelegationIndex{
+                                createValidator.ValidatorAddress,
+                                uint64(0),
+                                blockNum,
+                        }
+                        delegations, ok := newDelegations[createValidator.ValidatorAddress]
+                        if !ok </span><span class="cov0" title="0">{
+                                // If the cache doesn't have it, load it from DB for the first time.
+                                delegations, err = bc.ReadDelegationsByDelegator(createValidator.ValidatorAddress)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return nil, nil, err
+                                }</span>
+                        }
+                        <span class="cov0" title="0">delegations = append(delegations, selfIndex)
+                        newDelegations[createValidator.ValidatorAddress] = delegations</span>
                 case staking.DirectiveEditValidator:<span class="cov0" title="0"></span>
                 case staking.DirectiveDelegate:<span class="cov0" title="0">
                         delegate := decodePayload.(*staking.Delegate)
                         if err := processDelegateMetadata(delegate,
-                                newValidators,
                                 newDelegations,
                                 state,
                                 bc,
@@ -2908,41 +2927,7 @@ func (bc *BlockChain) prepareStakingMetaData(
         <span class="cov8" title="1">return newValidators, newDelegations, nil</span>
 }
 
-func processCreateValidatorMetadata(createValidator *staking.CreateValidator,
-        newValidators *[]common.Address,
-        newDelegations map[common.Address]staking.DelegationIndexes,
-        bc *BlockChain, blockNum *big.Int,
-) (err error) <span class="cov0" title="0">{
-        newList, appended := utils.AppendIfMissing(
-                *newValidators, createValidator.ValidatorAddress,
-        )
-        if !appended </span><span class="cov0" title="0">{
-                return errValidatorExist
-        }</span>
-        <span class="cov0" title="0">*newValidators = newList
-
-        // Add self delegation into the index
-        selfIndex := staking.DelegationIndex{
-                createValidator.ValidatorAddress,
-                uint64(0),
-                blockNum,
-        }
-        delegations, ok := newDelegations[createValidator.ValidatorAddress]
-        if !ok </span><span class="cov0" title="0">{
-                // If the cache doesn't have it, load it from DB for the first time.
-                delegations, err = bc.ReadDelegationsByDelegator(createValidator.ValidatorAddress)
-                if err != nil </span><span class="cov0" title="0">{
-                        return err
-                }</span>
-        }
-
-        <span class="cov0" title="0">delegations = append(delegations, selfIndex)
-        newDelegations[createValidator.ValidatorAddress] = delegations
-        return nil</span>
-}
-
 func processDelegateMetadata(delegate *staking.Delegate,
-        newValidators []common.Address,
         newDelegations map[common.Address]staking.DelegationIndexes,
         state *state.DB, bc *BlockChain, blockNum *big.Int,
 ) (err error) <span class="cov8" title="1">{
@@ -3597,25 +3582,26 @@ func NewEVMContext(msg Message, header *block.Header, chain ChainContext, author
                 copy(vrf[:], vrfAndProof[:32])
         }</span>
         <span class="cov8" title="1">return vm.Context{
-                CanTransfer:     CanTransfer,
-                Transfer:        Transfer,
-                IsValidator:     IsValidator,
-                GetHash:         GetHashFn(header, chain),
-                GetVRF:          GetVRFFn(header, chain),
-                CreateValidator: CreateValidatorFn(header, chain),
-                EditValidator:   EditValidatorFn(header, chain),
-                Delegate:        DelegateFn(header, chain),
-                Undelegate:      UndelegateFn(header, chain),
-                CollectRewards:  CollectRewardsFn(header, chain),
-                Origin:          msg.From(),
-                Coinbase:        beneficiary,
-                BlockNumber:     header.Number(),
-                EpochNumber:     header.Epoch(),
-                VRF:             vrf,
-                Time:            header.Time(),
-                GasLimit:        header.GasLimit(),
-                GasPrice:        new(big.Int).Set(msg.GasPrice()),
-                ShardID:         chain.ShardID(),
+                CanTransfer:        CanTransfer,
+                Transfer:           Transfer,
+                IsValidator:        IsValidator,
+                GetHash:            GetHashFn(header, chain),
+                GetVRF:             GetVRFFn(header, chain),
+                CreateValidator:    CreateValidatorFn(header, chain),
+                EditValidator:      EditValidatorFn(header, chain),
+                Delegate:           DelegateFn(header, chain),
+                Undelegate:         UndelegateFn(header, chain),
+                CollectRewards:     CollectRewardsFn(header, chain),
+                MigrateDelegations: MigrateDelegationsFn(header, chain),
+                Origin:             msg.From(),
+                Coinbase:           beneficiary,
+                BlockNumber:        header.Number(),
+                EpochNumber:        header.Epoch(),
+                VRF:                vrf,
+                Time:               header.Time(),
+                GasLimit:           header.GasLimit(),
+                GasPrice:           new(big.Int).Set(msg.GasPrice()),
+                ShardID:            chain.ShardID(),
         }</span>
 }
 
@@ -3749,6 +3735,28 @@ func CollectRewardsFn(ref *block.Header, chain ChainContext) vm.CollectRewardsFu
                 })
 
                 return nil</span>
+        }
+}
+
+func MigrateDelegationsFn(ref *block.Header, chain ChainContext) vm.MigrateDelegationsFunc <span class="cov8" title="1">{
+        return func(db vm.StateDB, migrationMsg *stakingTypes.MigrationMsg) ([]interface{}, error) </span><span class="cov8" title="1">{
+                // get existing delegations
+                fromDelegations, err := chain.ReadDelegationsByDelegator(migrationMsg.From)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                // get list of modified wrappers
+                <span class="cov8" title="1">wrappers, delegates, err := VerifyAndMigrateFromMsg(db, migrationMsg, fromDelegations)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                // add to state db
+                <span class="cov8" title="1">for _, wrapper := range wrappers </span><span class="cov8" title="1">{
+                        if err := db.UpdateValidatorWrapperWithRevert(wrapper.Address, wrapper); err != nil </span><span class="cov0" title="0">{
+                                return nil, err
+                        }</span>
+                }
+                <span class="cov8" title="1">return delegates, nil</span>
         }
 }
 
@@ -4170,7 +4178,547 @@ func (bc *BlockChain) getNextBlockEpoch(header *block.Header) (*big.Int, error) 
 }
 </pre>
 		
-		<pre class="file" id="file4" style="display: none">// Copyright 2015 The go-ethereum Authors
+		<pre class="file" id="file4" style="display: none">package core
+
+import (
+        "bytes"
+        "fmt"
+        "math/big"
+
+        "github.com/harmony-one/harmony/staking/availability"
+
+        "github.com/harmony-one/harmony/internal/params"
+
+        "github.com/harmony-one/harmony/crypto/bls"
+
+        "github.com/ethereum/go-ethereum/common"
+        "github.com/harmony-one/harmony/common/denominations"
+        "github.com/harmony-one/harmony/core/vm"
+        common2 "github.com/harmony-one/harmony/internal/common"
+        "github.com/harmony-one/harmony/internal/utils"
+        "github.com/harmony-one/harmony/staking/effective"
+        staking "github.com/harmony-one/harmony/staking/types"
+        "github.com/pkg/errors"
+)
+
+var (
+        errStateDBIsMissing    = errors.New("no stateDB was provided")
+        errChainContextMissing = errors.New("no chain context was provided")
+        errEpochMissing        = errors.New("no epoch was provided")
+        errBlockNumMissing     = errors.New("no block number was provided")
+)
+
+func checkDuplicateFields(
+        bc ChainContext, state vm.StateDB,
+        validator common.Address, identity string, blsKeys []bls.SerializedPublicKey,
+) error <span class="cov8" title="1">{
+        addrs, err := bc.ReadValidatorList()
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">checkIdentity := identity != ""
+        checkBlsKeys := len(blsKeys) != 0
+
+        blsKeyMap := map[bls.SerializedPublicKey]struct{}{}
+        for _, key := range blsKeys </span><span class="cov8" title="1">{
+                blsKeyMap[key] = struct{}{}
+        }</span>
+
+        <span class="cov8" title="1">for _, addr := range addrs </span><span class="cov8" title="1">{
+                if !bytes.Equal(validator.Bytes(), addr.Bytes()) </span><span class="cov8" title="1">{
+                        wrapper, err := state.ValidatorWrapper(addr, true, false)
+
+                        if err != nil </span><span class="cov8" title="1">{
+                                return err
+                        }</span>
+
+                        <span class="cov8" title="1">if checkIdentity &amp;&amp; wrapper.Identity == identity </span><span class="cov8" title="1">{
+                                return errors.Wrapf(errDupIdentity, "duplicate identity %s", identity)
+                        }</span>
+                        <span class="cov8" title="1">if checkBlsKeys </span><span class="cov8" title="1">{
+                                for _, existingKey := range wrapper.SlotPubKeys </span><span class="cov8" title="1">{
+                                        if _, ok := blsKeyMap[existingKey]; ok </span><span class="cov8" title="1">{
+                                                return errors.Wrapf(errDupBlsKey, "duplicate bls key %x", existingKey)
+                                        }</span>
+                                }
+                        }
+                }
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// TODO: add unit tests to check staking msg verification
+
+// VerifyAndCreateValidatorFromMsg verifies the create validator message using
+// the stateDB, epoch, &amp; blocknumber and returns the validatorWrapper created
+// in the process.
+//
+// Note that this function never updates the stateDB, it only reads from stateDB.
+func VerifyAndCreateValidatorFromMsg(
+        stateDB vm.StateDB, chainContext ChainContext, epoch *big.Int, blockNum *big.Int, msg *staking.CreateValidator,
+) (*staking.ValidatorWrapper, error) <span class="cov8" title="1">{
+        if stateDB == nil </span><span class="cov8" title="1">{
+                return nil, errStateDBIsMissing
+        }</span>
+        <span class="cov8" title="1">if chainContext == nil </span><span class="cov8" title="1">{
+                return nil, errChainContextMissing
+        }</span>
+        <span class="cov8" title="1">if epoch == nil </span><span class="cov8" title="1">{
+                return nil, errEpochMissing
+        }</span>
+        <span class="cov8" title="1">if blockNum == nil </span><span class="cov8" title="1">{
+                return nil, errBlockNumMissing
+        }</span>
+        <span class="cov8" title="1">if msg.Amount.Sign() == -1 </span><span class="cov8" title="1">{
+                return nil, errNegativeAmount
+        }</span>
+        <span class="cov8" title="1">if stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
+                return nil, errors.Wrapf(
+                        errValidatorExist, common2.MustAddressToBech32(msg.ValidatorAddress),
+                )
+        }</span>
+        <span class="cov8" title="1">if err := checkDuplicateFields(
+                chainContext, stateDB,
+                msg.ValidatorAddress,
+                msg.Identity,
+                msg.SlotPubKeys); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if !CanTransfer(stateDB, msg.ValidatorAddress, msg.Amount) </span><span class="cov8" title="1">{
+                return nil, errInsufficientBalanceForStake
+        }</span>
+        <span class="cov8" title="1">v, err := staking.CreateValidatorFromNewMsg(msg, blockNum, epoch)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">wrapper := &amp;staking.ValidatorWrapper{}
+        wrapper.Validator = *v
+        wrapper.Delegations = []staking.Delegation{
+                staking.NewDelegation(v.Address, msg.Amount),
+        }
+        wrapper.Counters.NumBlocksSigned = big.NewInt(0)
+        wrapper.Counters.NumBlocksToSign = big.NewInt(0)
+        wrapper.BlockReward = big.NewInt(0)
+        if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return wrapper, nil</span>
+}
+
+// VerifyAndEditValidatorFromMsg verifies the edit validator message using
+// the stateDB, chainContext and returns the edited validatorWrapper.
+//
+// Note that this function never updates the stateDB, it only reads from stateDB.
+func VerifyAndEditValidatorFromMsg(
+        stateDB vm.StateDB, chainContext ChainContext,
+        epoch, blockNum *big.Int, msg *staking.EditValidator,
+) (*staking.ValidatorWrapper, error) <span class="cov8" title="1">{
+        if stateDB == nil </span><span class="cov8" title="1">{
+                return nil, errStateDBIsMissing
+        }</span>
+        <span class="cov8" title="1">if chainContext == nil </span><span class="cov8" title="1">{
+                return nil, errChainContextMissing
+        }</span>
+        <span class="cov8" title="1">if blockNum == nil </span><span class="cov8" title="1">{
+                return nil, errBlockNumMissing
+        }</span>
+        <span class="cov8" title="1">if !stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
+                return nil, errValidatorNotExist
+        }</span>
+        <span class="cov8" title="1">newBlsKeys := []bls.SerializedPublicKey{}
+        if msg.SlotKeyToAdd != nil </span><span class="cov8" title="1">{
+                newBlsKeys = append(newBlsKeys, *msg.SlotKeyToAdd)
+        }</span>
+        <span class="cov8" title="1">if err := checkDuplicateFields(
+                chainContext, stateDB,
+                msg.ValidatorAddress,
+                msg.Identity,
+                newBlsKeys); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        // request a copy, but delegations are not being changed so do not deep copy them
+        <span class="cov8" title="1">wrapper, err := stateDB.ValidatorWrapper(msg.ValidatorAddress, false, false)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if err := staking.UpdateValidatorFromEditMsg(&amp;wrapper.Validator, msg, epoch); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">newRate := wrapper.Validator.Rate
+        if newRate.GT(wrapper.Validator.MaxRate) </span><span class="cov8" title="1">{
+                return nil, errCommissionRateChangeTooHigh
+        }</span>
+
+        <span class="cov8" title="1">if chainContext.Config().IsMinCommissionRate(epoch) &amp;&amp; newRate.LT(availability.MinCommissionRate) </span><span class="cov8" title="1">{
+                firstEpoch := stateDB.GetValidatorFirstElectionEpoch(msg.ValidatorAddress)
+                promoPeriod := chainContext.Config().MinCommissionPromoPeriod.Int64()
+                if firstEpoch.Uint64() != 0 &amp;&amp; big.NewInt(0).Sub(epoch, firstEpoch).Int64() &gt;= promoPeriod </span><span class="cov8" title="1">{
+                        return nil, errCommissionRateChangeTooLow
+                }</span>
+        }
+
+        <span class="cov8" title="1">snapshotValidator, err := chainContext.ReadValidatorSnapshot(wrapper.Address)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, errors.WithMessage(err, "validator snapshot not found.")
+        }</span>
+        <span class="cov8" title="1">rateAtBeginningOfEpoch := snapshotValidator.Validator.Rate
+
+        if rateAtBeginningOfEpoch.IsNil() ||
+                (!newRate.IsNil() &amp;&amp; !rateAtBeginningOfEpoch.Equal(newRate)) </span><span class="cov8" title="1">{
+                wrapper.Validator.UpdateHeight = blockNum
+        }</span>
+
+        <span class="cov8" title="1">if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(
+                wrapper.Validator.MaxChangeRate,
+        ) </span><span class="cov8" title="1">{
+                return nil, errCommissionRateChangeTooFast
+        }</span>
+        <span class="cov8" title="1">if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return wrapper, nil</span>
+}
+
+const oneThousand = 1000
+const oneHundred = 100
+
+var (
+        oneAsBigInt             = big.NewInt(denominations.One)
+        minimumDelegation       = new(big.Int).Mul(oneAsBigInt, big.NewInt(oneThousand))
+        minimumDelegationV2     = new(big.Int).Mul(oneAsBigInt, big.NewInt(oneHundred))
+        errDelegationTooSmall   = errors.New("minimum delegation amount for a delegator has to be greater than or equal to 1000 ONE")
+        errDelegationTooSmallV2 = errors.New("minimum delegation amount for a delegator has to be greater than or equal to 100 ONE")
+)
+
+// VerifyAndDelegateFromMsg verifies the delegate message using the stateDB
+// and returns the balance to be deducted by the delegator as well as the
+// validatorWrapper with the delegation applied to it.
+//
+// Note that this function never updates the stateDB, it only reads from stateDB.
+func VerifyAndDelegateFromMsg(
+        stateDB vm.StateDB, epoch *big.Int, msg *staking.Delegate, delegations []staking.DelegationIndex, chainConfig *params.ChainConfig,
+) ([]*staking.ValidatorWrapper, *big.Int, map[common.Address]*big.Int, error) <span class="cov8" title="1">{
+        if stateDB == nil </span><span class="cov8" title="1">{
+                return nil, nil, nil, errStateDBIsMissing
+        }</span>
+        <span class="cov8" title="1">if !stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
+                return nil, nil, nil, errValidatorNotExist
+        }</span>
+        <span class="cov8" title="1">if msg.Amount.Sign() == -1 </span><span class="cov8" title="1">{
+                return nil, nil, nil, errNegativeAmount
+        }</span>
+        <span class="cov8" title="1">if msg.Amount.Cmp(minimumDelegation) &lt; 0 </span><span class="cov8" title="1">{
+                if chainConfig.IsMinDelegation100(epoch) </span><span class="cov8" title="1">{
+                        if msg.Amount.Cmp(minimumDelegationV2) &lt; 0 </span><span class="cov8" title="1">{
+                                return nil, nil, nil, errDelegationTooSmallV2
+                        }</span>
+                } else<span class="cov8" title="1"> {
+                        return nil, nil, nil, errDelegationTooSmall
+                }</span>
+        }
+
+        <span class="cov8" title="1">updatedValidatorWrappers := []*staking.ValidatorWrapper{}
+        delegateBalance := big.NewInt(0).Set(msg.Amount)
+        fromLockedTokens := map[common.Address]*big.Int{}
+
+        var delegateeWrapper *staking.ValidatorWrapper
+        if chainConfig.IsRedelegation(epoch) </span><span class="cov8" title="1">{
+                // Check if we can use tokens in undelegation to delegate (redelegate)
+                for i := range delegations </span><span class="cov8" title="1">{
+                        delegationIndex := &amp;delegations[i]
+                        // request a copy, and since delegations will be changed, copy them too
+                        wrapper, err := stateDB.ValidatorWrapper(delegationIndex.ValidatorAddress, false, true)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, nil, nil, err
+                        }</span>
+                        <span class="cov8" title="1">if uint64(len(wrapper.Delegations)) &lt;= delegationIndex.Index </span><span class="cov8" title="1">{
+                                utils.Logger().Warn().
+                                        Str("validator", delegationIndex.ValidatorAddress.String()).
+                                        Uint64("delegation index", delegationIndex.Index).
+                                        Int("delegations length", len(wrapper.Delegations)).
+                                        Msg("Delegation index out of bound")
+                                return nil, nil, nil, errors.New("Delegation index out of bound")
+                        }</span>
+
+                        <span class="cov8" title="1">delegation := &amp;wrapper.Delegations[delegationIndex.Index]
+
+                        startBalance := big.NewInt(0).Set(delegateBalance)
+                        // Start from the oldest undelegated tokens
+                        curIndex := 0
+                        for ; curIndex &lt; len(delegation.Undelegations); curIndex++ </span><span class="cov8" title="1">{
+                                if delegation.Undelegations[curIndex].Epoch.Cmp(epoch) &gt;= 0 </span><span class="cov8" title="1">{
+                                        break</span>
+                                }
+                                <span class="cov8" title="1">if delegation.Undelegations[curIndex].Amount.Cmp(delegateBalance) &lt;= 0 </span><span class="cov8" title="1">{
+                                        delegateBalance.Sub(delegateBalance, delegation.Undelegations[curIndex].Amount)
+                                }</span> else<span class="cov8" title="1"> {
+                                        delegation.Undelegations[curIndex].Amount.Sub(
+                                                delegation.Undelegations[curIndex].Amount, delegateBalance,
+                                        )
+                                        delegateBalance = big.NewInt(0)
+                                        break</span>
+                                }
+                        }
+
+                        <span class="cov8" title="1">if startBalance.Cmp(delegateBalance) &gt; 0 </span><span class="cov8" title="1">{
+                                // Used undelegated token for redelegation
+                                delegation.Undelegations = delegation.Undelegations[curIndex:]
+                                if err := wrapper.SanityCheck(); err != nil </span><span class="cov0" title="0">{
+                                        return nil, nil, nil, err
+                                }</span>
+
+                                <span class="cov8" title="1">if bytes.Equal(delegationIndex.ValidatorAddress[:], msg.ValidatorAddress[:]) </span><span class="cov8" title="1">{
+                                        delegateeWrapper = wrapper
+                                }</span>
+                                <span class="cov8" title="1">updatedValidatorWrappers = append(updatedValidatorWrappers, wrapper)
+                                fromLockedTokens[delegationIndex.ValidatorAddress] = big.NewInt(0).Sub(startBalance, delegateBalance)</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">if delegateeWrapper == nil </span><span class="cov8" title="1">{
+                var err error
+                // request a copy, and since delegations will be changed, copy them too
+                delegateeWrapper, err = stateDB.ValidatorWrapper(msg.ValidatorAddress, false, true)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, nil, nil, err
+                }</span>
+                <span class="cov8" title="1">updatedValidatorWrappers = append(updatedValidatorWrappers, delegateeWrapper)</span>
+        }
+
+        // Add to existing delegation if any
+        <span class="cov8" title="1">found := false
+        for i := range delegateeWrapper.Delegations </span><span class="cov8" title="1">{
+                delegation := &amp;delegateeWrapper.Delegations[i]
+                if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.DelegatorAddress.Bytes()) </span><span class="cov8" title="1">{
+                        delegation.Amount.Add(delegation.Amount, msg.Amount)
+                        if err := delegateeWrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+                                return nil, nil, nil, err
+                        }</span>
+                        <span class="cov8" title="1">found = true</span>
+                }
+        }
+
+        <span class="cov8" title="1">if !found </span><span class="cov8" title="1">{
+                // Add new delegation
+                delegateeWrapper.Delegations = append(
+                        delegateeWrapper.Delegations, staking.NewDelegation(
+                                msg.DelegatorAddress, msg.Amount,
+                        ),
+                )
+                if err := delegateeWrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+                        return nil, nil, nil, err
+                }</span>
+        }
+
+        <span class="cov8" title="1">if delegateBalance.Cmp(big.NewInt(0)) == 0 </span><span class="cov8" title="1">{
+                // delegation fully from undelegated tokens, no need to deduct from balance.
+                return updatedValidatorWrappers, big.NewInt(0), fromLockedTokens, nil
+        }</span>
+
+        // Still need to deduct tokens from balance for delegation
+        // Check if there is enough liquid token to delegate
+        <span class="cov8" title="1">if !CanTransfer(stateDB, msg.DelegatorAddress, delegateBalance) </span><span class="cov8" title="1">{
+                return nil, nil, nil, errors.Wrapf(
+                        errInsufficientBalanceForStake, "totalRedelegatable: %v, balance: %v; trying to stake %v",
+                        big.NewInt(0).Sub(msg.Amount, delegateBalance), stateDB.GetBalance(msg.DelegatorAddress), msg.Amount)
+        }</span>
+
+        <span class="cov8" title="1">return updatedValidatorWrappers, delegateBalance, fromLockedTokens, nil</span>
+}
+
+// VerifyAndUndelegateFromMsg verifies the undelegate validator message
+// using the stateDB &amp; chainContext and returns the edited validatorWrapper
+// with the undelegation applied to it.
+//
+// Note that this function never updates the stateDB, it only reads from stateDB.
+func VerifyAndUndelegateFromMsg(
+        stateDB vm.StateDB, epoch *big.Int, msg *staking.Undelegate,
+) (*staking.ValidatorWrapper, error) <span class="cov8" title="1">{
+        if stateDB == nil </span><span class="cov8" title="1">{
+                return nil, errStateDBIsMissing
+        }</span>
+        <span class="cov8" title="1">if epoch == nil </span><span class="cov8" title="1">{
+                return nil, errEpochMissing
+        }</span>
+
+        <span class="cov8" title="1">if msg.Amount.Sign() == -1 </span><span class="cov8" title="1">{
+                return nil, errNegativeAmount
+        }</span>
+
+        <span class="cov8" title="1">if !stateDB.IsValidator(msg.ValidatorAddress) </span><span class="cov8" title="1">{
+                return nil, errValidatorNotExist
+        }</span>
+
+        <span class="cov8" title="1">wrapper, err := stateDB.ValidatorWrapper(msg.ValidatorAddress, false, true)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">for i := range wrapper.Delegations </span><span class="cov8" title="1">{
+                delegation := &amp;wrapper.Delegations[i]
+                if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.DelegatorAddress.Bytes()) </span><span class="cov8" title="1">{
+                        if err := delegation.Undelegate(epoch, msg.Amount); err != nil </span><span class="cov8" title="1">{
+                                return nil, err
+                        }</span>
+                        <span class="cov8" title="1">if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+                                // allow self delegation to go below min self delegation
+                                // but set the status to inactive
+                                if errors.Cause(err) == staking.ErrInvalidSelfDelegation </span><span class="cov8" title="1">{
+                                        wrapper.Status = effective.Inactive
+                                }</span> else<span class="cov0" title="0"> {
+                                        return nil, err
+                                }</span>
+                        }
+                        <span class="cov8" title="1">return wrapper, nil</span>
+                }
+        }
+        <span class="cov8" title="1">return nil, errNoDelegationToUndelegate</span>
+}
+
+// VerifyAndMigrateFromMsg verifies and transfers all delegations of
+// msg.From to msg.To. Returns all modified validator wrappers and delegate msgs
+// for metadata
+// Note that this function never updates the stateDB, it only reads from stateDB.
+func VerifyAndMigrateFromMsg(
+        stateDB vm.StateDB,
+        msg *staking.MigrationMsg,
+        fromDelegations []staking.DelegationIndex,
+) ([]*staking.ValidatorWrapper,
+        []interface{},
+        error) <span class="cov8" title="1">{
+        if len(fromDelegations) == 0 </span><span class="cov8" title="1">{
+                // we are already done
+                return nil, nil, nil
+        }</span>
+        <span class="cov8" title="1">if bytes.Equal(msg.From.Bytes(), msg.To.Bytes()) </span><span class="cov0" title="0">{
+                // we are already done
+                return nil, nil, nil
+        }</span>
+        <span class="cov8" title="1">modifiedWrappers := make([]*staking.ValidatorWrapper, 0)
+        stakeMsgs := make([]interface{}, 0)
+        // iterate over all delegationIndexes by `From`
+        for i := range fromDelegations </span><span class="cov8" title="1">{
+                delegationIndex := &amp;fromDelegations[i]
+                // find the wrapper for each delegationIndex
+                // request a copy, and since delegations will be changed, copy them too
+                wrapper, err := stateDB.ValidatorWrapper(delegationIndex.ValidatorAddress, false, true)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, nil, err
+                }</span>
+                <span class="cov8" title="1">if uint64(len(wrapper.Delegations)) &lt;= delegationIndex.Index </span><span class="cov0" title="0">{
+                        utils.Logger().Warn().
+                                Str("validator", delegationIndex.ValidatorAddress.String()).
+                                Uint64("delegation index", delegationIndex.Index).
+                                Int("delegations length", len(wrapper.Delegations)).
+                                Msg("Delegation index out of bound")
+                        return nil, nil, errors.New("Delegation index out of bound")
+                }</span>
+                // and then find matching delegation to remove from wrapper
+                <span class="cov8" title="1">foundDelegation := &amp;wrapper.Delegations[delegationIndex.Index] // note: pointer
+                if !bytes.Equal(foundDelegation.DelegatorAddress.Bytes(), msg.From.Bytes()) </span><span class="cov0" title="0">{
+                        return nil, nil, errors.New(fmt.Sprintf("Expected %s but got %s",
+                                msg.From.Hex(),
+                                foundDelegation.DelegatorAddress.Hex()))
+                }</span>
+                // Skip delegations with zero amount and empty undelegation
+                <span class="cov8" title="1">if foundDelegation.Amount.Cmp(common.Big0) == 0 &amp;&amp; len(foundDelegation.Undelegations) == 0 </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">delegationAmountToMigrate := big.NewInt(0).Add(foundDelegation.Amount, big.NewInt(0))
+                undelegationsToMigrate := foundDelegation.Undelegations
+                // when undelegating we don't remove, just set the amount to zero
+                // to be coherent, do the same thing here (effective on wrapper since pointer)
+                foundDelegation.Amount = big.NewInt(0)
+                foundDelegation.Undelegations = make([]staking.Undelegation, 0)
+                // find `To` and give it to them
+                totalAmount := big.NewInt(0)
+                found := false
+                for i := range wrapper.Delegations </span><span class="cov8" title="1">{
+                        delegation := &amp;wrapper.Delegations[i]
+                        if bytes.Equal(delegation.DelegatorAddress.Bytes(), msg.To.Bytes()) </span><span class="cov8" title="1">{
+                                found = true
+                                // add to existing delegation
+                                totalAmount = delegation.Amount.Add(delegation.Amount, delegationAmountToMigrate)
+                                // and the undelegation
+                                delegation.Undelegations = append(delegation.Undelegations,
+                                        undelegationsToMigrate...)
+                                break</span>
+                        }
+                }
+                <span class="cov8" title="1">if !found </span><span class="cov8" title="1">{ // add the delegation
+                        wrapper.Delegations = append(
+                                wrapper.Delegations, staking.NewDelegation(
+                                        msg.To, delegationAmountToMigrate,
+                                ),
+                        )
+                        totalAmount = delegationAmountToMigrate
+                }</span>
+                <span class="cov8" title="1">if err := wrapper.SanityCheck(); err != nil </span><span class="cov8" title="1">{
+                        // allow self delegation to go below min self delegation
+                        // but set the status to inactive
+                        if errors.Cause(err) == staking.ErrInvalidSelfDelegation </span><span class="cov8" title="1">{
+                                wrapper.Status = effective.Inactive
+                        }</span> else<span class="cov0" title="0"> {
+                                return nil, nil, err
+                        }</span>
+                }
+                <span class="cov8" title="1">modifiedWrappers = append(modifiedWrappers, wrapper)
+                delegate := &amp;staking.Delegate{
+                        ValidatorAddress: wrapper.Address,
+                        DelegatorAddress: msg.To,
+                        Amount:           totalAmount,
+                }
+                stakeMsgs = append(stakeMsgs, delegate)</span>
+        }
+        <span class="cov8" title="1">return modifiedWrappers, stakeMsgs, nil</span>
+}
+
+// VerifyAndCollectRewardsFromDelegation verifies and collects rewards
+// from the given delegation slice using the stateDB. It returns all of the
+// edited validatorWrappers and the sum total of the rewards.
+//
+// Note that this function never updates the stateDB, it only reads from stateDB.
+func VerifyAndCollectRewardsFromDelegation(
+        stateDB vm.StateDB, delegations []staking.DelegationIndex,
+) ([]*staking.ValidatorWrapper, *big.Int, error) <span class="cov8" title="1">{
+        if stateDB == nil </span><span class="cov8" title="1">{
+                return nil, nil, errStateDBIsMissing
+        }</span>
+        <span class="cov8" title="1">updatedValidatorWrappers := []*staking.ValidatorWrapper{}
+        totalRewards := big.NewInt(0)
+        for i := range delegations </span><span class="cov8" title="1">{
+                delegation := &amp;delegations[i]
+                // request a copy, and since delegations will be changed (.Reward.Set), copy them too
+                wrapper, err := stateDB.ValidatorWrapper(delegation.ValidatorAddress, false, true)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, nil, err
+                }</span>
+                <span class="cov8" title="1">if uint64(len(wrapper.Delegations)) &gt; delegation.Index </span><span class="cov8" title="1">{
+                        delegation := &amp;wrapper.Delegations[delegation.Index]
+                        if delegation.Reward.Cmp(common.Big0) &gt; 0 </span><span class="cov8" title="1">{
+                                totalRewards.Add(totalRewards, delegation.Reward)
+                                delegation.Reward.SetUint64(0)
+                        }</span>
+                } else<span class="cov8" title="1"> {
+                        utils.Logger().Warn().
+                                Str("validator", delegation.ValidatorAddress.String()).
+                                Uint64("delegation index", delegation.Index).
+                                Int("delegations length", len(wrapper.Delegations)).
+                                Msg("Delegation index out of bound")
+                        return nil, nil, errors.New("Delegation index out of bound")
+                }</span>
+                <span class="cov8" title="1">updatedValidatorWrappers = append(updatedValidatorWrappers, wrapper)</span>
+        }
+        <span class="cov8" title="1">if totalRewards.Int64() == 0 </span><span class="cov8" title="1">{
+                return nil, nil, errNoRewardsToCollect
+        }</span>
+        <span class="cov8" title="1">return updatedValidatorWrappers, totalRewards, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -4578,7 +5126,7 @@ func StakingToMessage(
 }
 </pre>
 		
-		<pre class="file" id="file5" style="display: none">// Copyright 2014 The go-ethereum Authors
+		<pre class="file" id="file6" style="display: none">// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -4963,7 +5511,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) <sp
 }
 </pre>
 		
-		<pre class="file" id="file6" style="display: none">// Copyright 2014 The go-ethereum Authors
+		<pre class="file" id="file7" style="display: none">// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -6622,7 +7170,7 @@ func (t *txLookup) Remove(hash common.Hash) <span class="cov8" title="1">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file7" style="display: none">// Copyright 2014 The go-ethereum Authors
+		<pre class="file" id="file8" style="display: none">// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -6753,6 +7301,8 @@ var PrecompiledContractsStaking = map[common.Address]PrecompiledContract{
         common.BytesToAddress([]byte{8}): &amp;bn256PairingIstanbul{},
         common.BytesToAddress([]byte{9}): &amp;blake2F{},
 
+        common.BytesToAddress([]byte{250}): &amp;epoch{},
+        common.BytesToAddress([]byte{251}): nil,
         common.BytesToAddress([]byte{252}): nil, // used by WriteCapablePrecompiledContractsStaking
         // marked nil to ensure no overwrite
         common.BytesToAddress([]byte{253}): &amp;sha3fip{},
@@ -7202,6 +7752,23 @@ func (c *blake2F) Run(input []byte) ([]byte, error) <span class="cov8" title="1"
         <span class="cov8" title="1">return output, nil</span>
 }
 
+// epoch returns the current epoch, implemented as a native contract
+type epoch struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+//
+// This method does not require any overflow checking as the input size gas costs
+// required for anything significant is so high it's impossible to pay for.
+func (c *epoch) RequiredGas(input []byte) uint64 <span class="cov8" title="1">{
+        return GasQuickStep
+}</span>
+
+func (c *epoch) Run(input []byte) ([]byte, error) <span class="cov8" title="1">{
+        // Note the input was overwritten with the epoch of the current block
+        // So just format and return
+        return common.LeftPadBytes(input, 32), nil
+}</span>
+
 // VRF implemented as a native contract.
 type vrf struct{}
 
@@ -7276,7 +7843,7 @@ func (c *ecrecoverPublicKey) Run(input []byte) ([]byte, error) <span class="cov8
 }
 </pre>
 		
-		<pre class="file" id="file8" style="display: none">package vm
+		<pre class="file" id="file9" style="display: none">package vm
 
 import (
         "errors"
@@ -7292,6 +7859,7 @@ import (
 // which are available after the StakingPrecompileEpoch
 // for now, we have only one contract at 252 or 0xfc - which is the staking precompile
 var WriteCapablePrecompiledContractsStaking = map[common.Address]WriteCapablePrecompiledContract{
+        common.BytesToAddress([]byte{251}): &amp;migrationPrecompile{},
         common.BytesToAddress([]byte{252}): &amp;stakingPrecompile{},
 }
 
@@ -7343,6 +7911,7 @@ func (c *stakingPrecompile) RequiredGas(
         // if invalid data or invalid shard
         // set payload to blank and charge minimum gas
         var payload []byte = make([]byte, 0)
+        // availability of staking and precompile has already been checked
         if evm.Context.ShardID == shard.BeaconChainShardID </span><span class="cov8" title="1">{
                 // check that input is well formed
                 // meaning all the expected parameters are available
@@ -7398,9 +7967,77 @@ func (c *stakingPrecompile) RunWriteCapable(
         }</span>
         <span class="cov0" title="0">return nil, stakingTypes.ErrInvalidStakingKind</span>
 }
+
+type migrationPrecompile struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+//
+// This method does not require any overflow checking as the input size gas costs
+// required for anything significant is so high it's impossible to pay for.
+func (c *migrationPrecompile) RequiredGas(
+        evm *EVM,
+        contract *Contract,
+        input []byte,
+) (uint64, error) <span class="cov8" title="1">{
+        // if invalid data or invalid shard
+        // set payload to blank and charge minimum gas
+        var payload []byte = make([]byte, 0)
+        // availability of staking and precompile has already been checked
+        if evm.Context.ShardID == shard.BeaconChainShardID </span><span class="cov8" title="1">{
+                // check that input is well formed
+                // meaning all the expected parameters are available
+                // and that we are only trying to perform staking tx
+                // on behalf of the correct entity
+                migrationMsg, err := staking.ParseMigrationMsg(contract.Caller(), input)
+                if err == nil </span><span class="cov8" title="1">{
+                        // otherwise charge based on the data
+                        if encoded, err := rlp.EncodeToBytes(migrationMsg); err == nil </span><span class="cov0" title="0">{
+                                payload = encoded
+                        }</span>
+                }
+        }
+        <span class="cov8" title="1">if gas, err := IntrinsicGas(
+                payload,
+                false,                                   // contractCreation
+                evm.ChainConfig().IsS3(evm.EpochNumber), // homestead
+                evm.ChainConfig().IsIstanbul(evm.EpochNumber), // istanbul
+                false, // isValidatorCreation
+        ); err != nil </span><span class="cov0" title="0">{
+                return 0, err // ErrOutOfGas occurs when gas payable &gt; uint64
+        }</span> else<span class="cov8" title="1"> {
+                return gas, nil
+        }</span>
+}
+
+func (c *migrationPrecompile) RunWriteCapable(
+        evm *EVM,
+        contract *Contract,
+        input []byte,
+) ([]byte, error) <span class="cov8" title="1">{
+        if evm.Context.ShardID != shard.BeaconChainShardID </span><span class="cov0" title="0">{
+                return nil, errors.New("Staking not supported on this shard")
+        }</span>
+        <span class="cov8" title="1">migrationMsg, err := staking.ParseMigrationMsg(contract.Caller(), input)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">stakeMsgs, err := evm.MigrateDelegations(evm.StateDB, migrationMsg)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span> else<span class="cov8" title="1"> {
+                for _, stakeMsg := range stakeMsgs </span><span class="cov0" title="0">{
+                        if delegate, ok := stakeMsg.(*stakingTypes.Delegate); ok </span><span class="cov0" title="0">{
+                                evm.StakeMsgs = append(evm.StakeMsgs, delegate)
+                        }</span> else<span class="cov0" title="0"> {
+                                panic("Received incompatible stakeMsg")</span>
+                        }
+                }
+                <span class="cov8" title="1">return nil, nil</span>
+        }
+}
 </pre>
 		
-		<pre class="file" id="file9" style="display: none">// Copyright 2014 The go-ethereum Authors
+		<pre class="file" id="file10" style="display: none">// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -7453,6 +8090,8 @@ type (
         DelegateFunc        func(db StateDB, stakeMsg *stakingTypes.Delegate) error
         UndelegateFunc      func(db StateDB, stakeMsg *stakingTypes.Undelegate) error
         CollectRewardsFunc  func(db StateDB, stakeMsg *stakingTypes.CollectRewards) error
+        // Used for migrating delegations via the migration precompile
+        MigrateDelegationsFunc func(db StateDB, migrationMsg *stakingTypes.MigrationMsg) ([]interface{}, error)
 )
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
@@ -7477,7 +8116,7 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
                         precompiles = PrecompiledContractsStaking
                         writeCapablePrecompiles = WriteCapablePrecompiledContractsStaking
                 }</span>
-                <span class="cov8" title="1">if p := precompiles[*contract.CodeAddr]; p != nil </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if p := precompiles[*contract.CodeAddr]; p != nil </span><span class="cov8" title="1">{
                         if _, ok := p.(*vrf); ok </span><span class="cov0" title="0">{
                                 if evm.chainRules.IsPrevVRF </span><span class="cov0" title="0">{
                                         requestedBlockNum := big.NewInt(0).SetBytes(input)
@@ -7496,8 +8135,10 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
                                         // Override the input with vrf data of the requested block so it can be returned to the contract program.
                                         input = evm.Context.VRF.Bytes()
                                 }</span>
-                        }
-                        <span class="cov0" title="0">return RunPrecompiledContract(p, input, contract)</span>
+                        } else<span class="cov8" title="1"> if _, ok := p.(*epoch); ok </span><span class="cov8" title="1">{
+                                input = evm.EpochNumber.Bytes()
+                        }</span>
+                        <span class="cov8" title="1">return RunPrecompiledContract(p, input, contract)</span>
                 }
                 <span class="cov8" title="1">if p := writeCapablePrecompiles[*contract.CodeAddr]; p != nil </span><span class="cov8" title="1">{
                         return RunWriteCapablePrecompiledContract(p, evm, contract, input, readOnly)
@@ -7555,11 +8196,12 @@ type Context struct {
 
         TxType types.TransactionType
 
-        CreateValidator CreateValidatorFunc
-        EditValidator   EditValidatorFunc
-        Delegate        DelegateFunc
-        Undelegate      UndelegateFunc
-        CollectRewards  CollectRewardsFunc
+        CreateValidator    CreateValidatorFunc
+        EditValidator      EditValidatorFunc
+        Delegate           DelegateFunc
+        Undelegate         UndelegateFunc
+        CollectRewards     CollectRewardsFunc
+        MigrateDelegations MigrateDelegationsFunc
 
         // staking precompile checks this before proceeding forward
         ShardID uint32
@@ -7978,7 +8620,7 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 func (evm *EVM) ChainConfig() *params.ChainConfig <span class="cov8" title="1">{ return evm.chainConfig }</span>
 </pre>
 		
-		<pre class="file" id="file10" style="display: none">// Copyright 2015 The go-ethereum Authors
+		<pre class="file" id="file11" style="display: none">// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -8075,7 +8717,7 @@ func IntrinsicGas(data []byte, contractCreation, homestead, istanbul, isValidato
 }
 </pre>
 		
-		<pre class="file" id="file11" style="display: none">// Copyright 2017 The go-ethereum Authors
+		<pre class="file" id="file12" style="display: none">// Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -8957,7 +9599,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes <span class="cov0" title="0"
 }
 </pre>
 		
-		<pre class="file" id="file12" style="display: none">package params
+		<pre class="file" id="file13" style="display: none">package params
 
 import (
         "fmt"
@@ -9594,7 +10236,12 @@ type Rules struct {
 
 // Rules ensures c's ChainID is not nil.
 func (c *ChainConfig) Rules(epoch *big.Int) Rules <span class="cov8" title="1">{
-        chainID := c.ChainID
+        if c.IsStakingPrecompile(epoch) </span><span class="cov8" title="1">{
+                if !c.IsPreStaking(epoch) </span><span class="cov0" title="0">{
+                        panic("Cannot have staking precompile epoch if not prestaking epoch")</span>
+                }
+        }
+        <span class="cov8" title="1">chainID := c.ChainID
         if chainID == nil </span><span class="cov0" title="0">{
                 chainID = new(big.Int)
         }</span>
@@ -9618,7 +10265,7 @@ func (c *ChainConfig) Rules(epoch *big.Int) Rules <span class="cov8" title="1">{
 }
 </pre>
 		
-		<pre class="file" id="file13" style="display: none">package worker
+		<pre class="file" id="file14" style="display: none">package worker
 
 import (
         "bytes"
@@ -10209,7 +10856,7 @@ func New(
 }</span>
 </pre>
 		
-		<pre class="file" id="file14" style="display: none">package services
+		<pre class="file" id="file15" style="display: none">package services
 
 import (
         "context"
@@ -10546,9 +11193,10 @@ func isStakingOperation(op string) bool <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file15" style="display: none">package staking
+		<pre class="file" id="file16" style="display: none">package staking
 
 import (
+        "bytes"
         "math/big"
         "strings"
 
@@ -10559,6 +11207,7 @@ import (
 )
 
 var abiStaking abi.ABI
+var abiMigration abi.ABI
 
 func init() <span class="cov8" title="1">{
         // for commission rates =&gt; solidity does not support floats directly
@@ -10626,21 +11275,37 @@ func init() <span class="cov8" title="1">{
           }
         ]
         `
+        MigrationABIJSON := `
+        [
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+              }
+            ],
+            "name": "Migrate",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          }
+        ]
+        `
         abiStaking, _ = abi.JSON(strings.NewReader(StakingABIJSON))
-}</span>
-
-func ParseStakingMethod(input []byte) (*abi.Method, error) <span class="cov8" title="1">{
-        return abiStaking.MethodById(input)
+        abiMigration, _ = abi.JSON(strings.NewReader(MigrationABIJSON))
 }</span>
 
 // contractCaller (and not Contract) is used here to avoid import cycle
 func ParseStakeMsg(contractCaller common.Address, input []byte) (interface{}, error) <span class="cov8" title="1">{
-        if len(input) &lt; 4 </span><span class="cov8" title="1">{
-                return nil, errors.New("Input is malformed")
-        }</span>
-        <span class="cov8" title="1">method, err := ParseStakingMethod(input)
+        method, err := abiStaking.MethodById(input)
         if err != nil </span><span class="cov8" title="1">{
-                return nil, stakingTypes.ErrInvalidStakingKind
+                return nil, err
         }</span>
         <span class="cov8" title="1">input = input[4:]                // drop the method selector
         args := map[string]interface{}{} // store into map
@@ -10711,8 +11376,42 @@ func ParseStakeMsg(contractCaller common.Address, input []byte) (interface{}, er
                 }
         default:<span class="cov0" title="0">
                 </span><span class="cov0" title="0">{
-                        return nil, stakingTypes.ErrInvalidStakingKind
-                }</span>
+                        panic("[StakingPrecompiles] Cannot reach here")</span>
+                }
+        }
+}
+
+func ParseMigrationMsg(contractCaller common.Address, input []byte) (*stakingTypes.MigrationMsg, error) <span class="cov8" title="1">{
+        method, err := abiMigration.MethodById(input)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">input = input[4:]                // drop the method selector
+        args := map[string]interface{}{} // store into map
+        if err = method.Inputs.UnpackIntoMap(args, input); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">switch method.Name </span>{
+        case "Migrate":<span class="cov8" title="1">
+                </span><span class="cov8" title="1">{
+                        from, err := ValidateContractAddress(contractCaller, args, "from")
+                        if err != nil </span><span class="cov8" title="1">{
+                                return nil, err
+                        }</span>
+                        <span class="cov8" title="1">to, err := ParseAddressFromKey(args, "to")
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, err
+                        }</span>
+                        // no sanity check for migrating to same address, just do nothing
+                        <span class="cov8" title="1">return &amp;stakingTypes.MigrationMsg{
+                                From: from,
+                                To:   to,
+                        }, nil</span>
+                }
+        default:<span class="cov0" title="0">
+                </span><span class="cov0" title="0">{
+                        panic("[StakingPrecompiles] Cannot reach here")</span>
+                }
         }
 }
 
@@ -10722,9 +11421,9 @@ func ValidateContractAddress(contractCaller common.Address, args map[string]inte
         if err != nil </span><span class="cov8" title="1">{
                 return common.Address{}, err
         }</span>
-        <span class="cov8" title="1">if contractCaller != address </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if !bytes.Equal(contractCaller.Bytes(), address.Bytes()) </span><span class="cov8" title="1">{
                 return common.Address{}, errors.Errorf(
-                        "[StakingPrecompile] Address mismatch, expected %s have %s",
+                        "[StakingPrecompiles] Address mismatch, expected %s have %s",
                         contractCaller.String(), address.String(),
                 )
         }</span> else<span class="cov8" title="1"> {
@@ -10753,9 +11452,10 @@ func ParseBigIntFromKey(args map[string]interface{}, key string) (*big.Int, erro
 }
 </pre>
 		
-		<pre class="file" id="file16" style="display: none">package types
+		<pre class="file" id="file17" style="display: none">package types
 
 import (
+        "bytes"
         "fmt"
         "math/big"
 
@@ -10929,10 +11629,10 @@ func (v Delegate) Copy() StakeMsg <span class="cov8" title="1">{
 
 // Equals returns if v and s are equal
 func (v Delegate) Equals(s Delegate) bool <span class="cov8" title="1">{
-        if v.DelegatorAddress != s.DelegatorAddress </span><span class="cov0" title="0">{
+        if !bytes.Equal(v.DelegatorAddress.Bytes(), s.DelegatorAddress.Bytes()) </span><span class="cov0" title="0">{
                 return false
         }</span>
-        <span class="cov8" title="1">if v.ValidatorAddress != v.ValidatorAddress </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if !bytes.Equal(v.ValidatorAddress.Bytes(), s.ValidatorAddress.Bytes()) </span><span class="cov0" title="0">{
                 return false
         }</span>
         <span class="cov8" title="1">if v.Amount == nil </span><span class="cov0" title="0">{
@@ -10967,10 +11667,10 @@ func (v Undelegate) Copy() StakeMsg <span class="cov8" title="1">{
 
 // Equals returns if v and s are equal
 func (v Undelegate) Equals(s Undelegate) bool <span class="cov8" title="1">{
-        if v.DelegatorAddress != s.DelegatorAddress </span><span class="cov0" title="0">{
+        if !bytes.Equal(v.DelegatorAddress.Bytes(), s.DelegatorAddress.Bytes()) </span><span class="cov0" title="0">{
                 return false
         }</span>
-        <span class="cov8" title="1">if v.ValidatorAddress != v.ValidatorAddress </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if !bytes.Equal(v.ValidatorAddress.Bytes(), s.ValidatorAddress.Bytes()) </span><span class="cov0" title="0">{
                 return false
         }</span>
         <span class="cov8" title="1">if v.Amount == nil </span><span class="cov0" title="0">{
@@ -10998,7 +11698,24 @@ func (v CollectRewards) Copy() StakeMsg <span class="cov8" title="1">{
 
 // Equals returns if v and s are equal
 func (v CollectRewards) Equals(s CollectRewards) bool <span class="cov8" title="1">{
-        return v.DelegatorAddress == s.DelegatorAddress
+        return bytes.Equal(v.DelegatorAddress.Bytes(), s.DelegatorAddress.Bytes())
+}</span>
+
+// Migration Msg - type for switching delegation from one user to next
+type MigrationMsg struct {
+        From common.Address `json:"from" rlp:"nil"`
+        To   common.Address `json:"to" rlp:"nil"`
+}
+
+func (v MigrationMsg) Copy() MigrationMsg <span class="cov0" title="0">{
+        return MigrationMsg{
+                From: v.From,
+                To:   v.To,
+        }
+}</span>
+
+func (v MigrationMsg) Equals(s MigrationMsg) bool <span class="cov8" title="1">{
+        return v.From == s.From &amp;&amp; v.To == s.To
 }</span>
 </pre>
 		
