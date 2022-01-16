@@ -40,15 +40,14 @@ def setup():
     endpoint = getenv( "endpoint" )
     w3 = Web3( Web3.HTTPProvider( endpoint ) )
     accounts.add( pk )
-    print( f"Waiting for node at {endpoint} to boot up" )
-    current_block_num = 0
+    print( f"Waiting for node at {endpoint} to boot up and reach staking era" )
     current_epoch = 0
     wanted_epoch = 2  # staking epoch
-    timeout = 90  # epoch 2 is 14, so ~30 seconds for that
+    timeout = 90  # epoch 2 is 14, so +30 seconds for that
     start_time = time.time()
     shard = -1
     while (
-        ( shard == 0 or shard == -1 ) and ( current_block_num == 0 ) and
+        ( shard == 0 or shard == -1 ) and
         ( ( time.time() - start_time ) <= timeout ) and
         ( current_epoch < wanted_epoch )
     ):
@@ -56,15 +55,20 @@ def setup():
             if shard == -1:
                 shard = blockchain.get_shard( endpoint = endpoint )
             current_block_num = blockchain.get_block_number( endpoint )
+            if current_block_num > 0:
+                # we are producing blocks, so we will reach wanted_epoch soon
+                start_time = time.time()
             current_epoch = blockchain.get_current_epoch( endpoint )
             print(
                 f"Current block number = {current_block_num}\n" +
                 f"Current epoch number = {current_epoch}"
             )
+        except KeyboardInterrupt:
+            pytext.exit( "KeyboardInterrupt" )
         except:
             pass
         time.sleep( 1 )
-    if current_block_num == 0:
+    if current_epoch < wanted_epoch:
         pytest.exit( f"Node didn't start in {timeout} seconds, exiting" )
     if shard != 0:
         pytest.exit( f"Shard needs to be 0, got {shard}" )
@@ -94,7 +98,6 @@ def test_collect_rewards_fail_before_create_validator():
 
 @pytest.mark.order( 2 )
 def test_delegate_fail_before_create_validator():
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     if validator_address in validators:
         pytest.skip( 'Validator already exists' )
     tx = staking_contract._delegate(
@@ -205,6 +208,8 @@ def test_delegate_success():
     if balance == 0:
         # useful if called via -k
         fund_contract( 100, staking_contract )
+    # same as above
+    create_validator( validator_address, validator_info, pk )
     nonce = account.get_account_nonce(
         validator_address,
         'latest',
@@ -730,7 +735,6 @@ def test_contract_which_reverts_success():
         'latest',
         endpoint = endpoint
     )
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     total_delegations_before = int(
         staking.get_validator_information(
             validator_address,
@@ -781,7 +785,6 @@ def test_eoa_access_success():
         'latest',
         endpoint = endpoint
     )
-    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     total_delegations_before = int(
         staking.get_validator_information(
             validator_address,
@@ -1032,3 +1035,89 @@ def test_shard_1_fail():
         total_delegations_before == protocol_min_delegation
     )
     print( "Delegation on shard 0 went through" )
+
+
+@pytest.mark.order( 18 )
+def test_eoa_migrate():
+    # useful if used via -k
+    create_validator( validator_address, validator_info, pk )
+    with open(
+        os.path.join(
+            os.path.split( __file__ )[ 0 ],
+            '../build/contracts/MigrationPrecompileSelectors.json'
+        )
+    ) as f:
+        abi = json.load( f )[ "abi" ]
+    # on Vanilla brownie, this will raise a ContractNotFound because of missing bytecode
+    # but just the ABI is enough to interact with the contract
+    # https://github.com/MaxMustermann2/brownie/commit/8ae2995159c06eddd7e2098a984e08d27542b79f
+    precompile = Contract.from_abi(
+        "StakingMigrationPrecompile",    # any name works
+        "0x00000000000000000000000000000000000000FB",
+        abi
+    )
+    nonce = account.get_account_nonce(
+        accounts[ 0 ].address,
+        'latest',
+        endpoint = endpoint
+    )
+    self_delegation_before = (
+        staking.get_delegation_by_delegator_and_validator(
+            validator_address,
+            validator_address,
+            endpoint = endpoint
+        ) or {}
+    ).get( 'amount',
+           0 )
+    if self_delegation_before != protocol_min_delegation * 100:
+        pytest.skip( 'Already migrated' )
+    contract_delegation_before = (
+        staking.get_delegation_by_delegator_and_validator(
+            staking_contract.address,
+            validator_address,
+            endpoint = endpoint
+        ) or {}
+    ).get( 'amount',
+           0 )
+    validator_status_before = staking.get_validator_information(
+        validator_address,
+        endpoint = endpoint
+    )[ 'active-status' ]
+    tx = precompile.Migrate(
+        accounts[ 0 ].address,
+        staking_contract.address,
+        {
+            'from': accounts[ 0 ].address,
+            'nonce': nonce,
+            'gas_limit': once_gas_limit * 50,
+        }
+    )
+    receipt = w3.eth.wait_for_transaction_receipt( tx.txid )
+    self_delegation_after = (
+        staking.get_delegation_by_delegator_and_validator(
+            validator_address,
+            validator_address,
+            endpoint = endpoint
+        ) or {}
+    ).get( 'amount',
+           0 )
+    contract_delegation_after = (
+        staking.get_delegation_by_delegator_and_validator(
+            staking_contract.address,
+            validator_address,
+            endpoint = endpoint
+        ) or {}
+    ).get( 'amount',
+           0 )
+    validator_status_after = staking.get_validator_information(
+        validator_address,
+        endpoint = endpoint
+    )[ 'active-status' ]
+    assert (
+        contract_delegation_after -
+        self_delegation_after == self_delegation_before -
+        contract_delegation_before
+    )
+    assert validator_status_before != validator_status_after
+    assert validator_status_after == 'inactive'
+    print( f"Gas consumed is {tx.gas_used}" )
