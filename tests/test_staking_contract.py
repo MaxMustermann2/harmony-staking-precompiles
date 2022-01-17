@@ -98,6 +98,7 @@ def test_collect_rewards_fail_before_create_validator():
 
 @pytest.mark.order( 2 )
 def test_delegate_fail_before_create_validator():
+    validators = staking.get_all_validator_addresses( endpoint = endpoint )
     if validator_address in validators:
         pytest.skip( 'Validator already exists' )
     tx = staking_contract._delegate(
@@ -287,43 +288,6 @@ def test_undelegate_fail_amount_gt_delegated():
     print( f"Gas consumed is {tx.gas_used}" )
 
 
-@pytest.mark.order( 11 )
-def test_undelegate_success():
-    nonce = account.get_account_nonce(
-        validator_address,
-        'latest',
-        endpoint = endpoint
-    )
-    total_delegations_before = int(
-        staking.get_validator_information(
-            validator_address,
-            endpoint = endpoint
-        )[ 'total-delegation' ]
-    )
-    tx = staking_contract._undelegate(
-        accounts[ 0 ].address,
-        protocol_min_delegation,
-        {
-            'from': accounts[ 0 ].address,
-            'nonce': nonce,
-            'gas_limit': once_gas_limit * 2,
-        }
-    )
-    receipt = w3.eth.wait_for_transaction_receipt( tx.txid )
-    assert ( int( receipt[ 'logs' ][ 0 ][ 'data' ][ -1 : ] ) == 1 )
-    total_delegations_after = int(
-        staking.get_validator_information(
-            validator_address,
-            endpoint = endpoint
-        )[ 'total-delegation' ]
-    )
-    assert (
-        total_delegations_before -
-        total_delegations_after == protocol_min_delegation
-    )
-    print( f"Gas consumed is {tx.gas_used}" )
-
-
 @pytest.mark.order( 10 )
 def test_collect_rewards_success():
     # check for delegation (useful if running via -k)
@@ -385,6 +349,43 @@ def test_collect_rewards_success():
         endpoint = endpoint
     )
     assert balance == reward
+    print( f"Gas consumed is {tx.gas_used}" )
+
+
+@pytest.mark.order( 11 )
+def test_undelegate_success():
+    nonce = account.get_account_nonce(
+        validator_address,
+        'latest',
+        endpoint = endpoint
+    )
+    total_delegations_before = int(
+        staking.get_validator_information(
+            validator_address,
+            endpoint = endpoint
+        )[ 'total-delegation' ]
+    )
+    tx = staking_contract._undelegate(
+        accounts[ 0 ].address,
+        protocol_min_delegation,
+        {
+            'from': accounts[ 0 ].address,
+            'nonce': nonce,
+            'gas_limit': once_gas_limit * 2,
+        }
+    )
+    receipt = w3.eth.wait_for_transaction_receipt( tx.txid )
+    assert ( int( receipt[ 'logs' ][ 0 ][ 'data' ][ -1 : ] ) == 1 )
+    total_delegations_after = int(
+        staking.get_validator_information(
+            validator_address,
+            endpoint = endpoint
+        )[ 'total-delegation' ]
+    )
+    assert (
+        total_delegations_before -
+        total_delegations_after == protocol_min_delegation
+    )
     print( f"Gas consumed is {tx.gas_used}" )
 
 
@@ -1069,7 +1070,9 @@ def test_eoa_migrate():
         ) or {}
     ).get( 'amount',
            0 )
-    if self_delegation_before != protocol_min_delegation * 100:
+    # test_eoa_access_success and test_eoa_subsidize_success
+    # increase the self_delegation_before by 600 ONE
+    if self_delegation_before < protocol_min_delegation * 100:
         pytest.skip( 'Already migrated' )
     contract_delegation_before = (
         staking.get_delegation_by_delegator_and_validator(
@@ -1079,10 +1082,12 @@ def test_eoa_migrate():
         ) or {}
     ).get( 'amount',
            0 )
-    validator_status_before = staking.get_validator_information(
-        validator_address,
-        endpoint = endpoint
-    )[ 'active-status' ]
+    # we get booted off due to low uptime, so this check is useless
+    # validator_status_before = staking.get_validator_information(
+    #     validator_address,
+    #     endpoint = endpoint
+    # )[ 'active-status' ]
+    # assert validator_status_before == 'active'
     tx = precompile.Migrate(
         accounts[ 0 ].address,
         staking_contract.address,
@@ -1118,6 +1123,6 @@ def test_eoa_migrate():
         self_delegation_after == self_delegation_before -
         contract_delegation_before
     )
-    assert validator_status_before != validator_status_after
+    # assert validator_status_before != validator_status_after
     assert validator_status_after == 'inactive'
     print( f"Gas consumed is {tx.gas_used}" )
