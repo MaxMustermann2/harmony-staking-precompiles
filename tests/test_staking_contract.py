@@ -1054,7 +1054,7 @@ def test_eoa_migrate():
     # https://github.com/MaxMustermann2/brownie/commit/8ae2995159c06eddd7e2098a984e08d27542b79f
     precompile = Contract.from_abi(
         "StakingMigrationPrecompile",    # any name works
-        "0x00000000000000000000000000000000000000FB",
+        "0x00000000000000000000000000000000000000FC",
         abi
     )
     nonce = account.get_account_nonce(
