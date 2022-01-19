@@ -79,6 +79,16 @@ def setup():
     print( "Set up test environment" )
 
 
+@pytest.mark.order( 0 )
+def test_epoch():
+    epoch = blockchain.get_current_epoch( endpoint )
+    epoch_from_contract = staking_contract.epoch()
+    print( f"Epoch from pyhmy: {epoch}" )
+    print( f"Epoch from contract: {epoch_from_contract}" )
+    # might be possible that epoch changes between pyhmy call and contract call
+    assert epoch_from_contract >= epoch
+
+
 @pytest.mark.order( 1 )
 def test_collect_rewards_fail_before_create_validator():
     tx = staking_contract._collectRewards(
@@ -1045,7 +1055,7 @@ def test_eoa_migrate():
     with open(
         os.path.join(
             os.path.split( __file__ )[ 0 ],
-            '../build/contracts/MigrationPrecompileSelectors.json'
+            '../build/contracts/StakingPrecompilesSelectors.json'
         )
     ) as f:
         abi = json.load( f )[ "abi" ]

@@ -17,6 +17,7 @@ abstract contract StakingPrecompilesSelectors {
                       address validatorAddress,
                       uint256 amount) public virtual;
   function CollectRewards(address delegatorAddress) public virtual;
+  function Migrate(address from, address to) public virtual;
 }
 
 contract StakingPrecompiles {
@@ -71,4 +72,18 @@ contract StakingPrecompiles {
       )
     }
   }
+
+  function epoch() public view returns (uint256) {
+    bytes32 input;
+    bytes32 epochNumber;
+    assembly {
+      let memPtr := mload(0x40)
+      if iszero(staticcall(not(0), 0xfb, input, 32, memPtr, 32)) {
+          invalid()
+      }
+      epochNumber := mload(memPtr)
+    }
+    return uint256(epochNumber);
+  }
+
 }
