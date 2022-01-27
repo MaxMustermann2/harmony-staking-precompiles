@@ -1,8 +1,7 @@
 const { ContractFactory } = require( '@harmony-js/contract' );
 const { Wallet } = require( '@harmony-js/account' );
 const { Messenger, HttpProvider } = require( '@harmony-js/network' );
-const { ChainID, ChainType, hexToNumber } = require( '@harmony-js/utils' );
-const { toWei, Units } = require('@harmony-js/utils');
+const { ChainID, ChainType, hexToNumber, toWei, Units } = require( '@harmony-js/utils' );
 // read endpoint from .env
 require( 'dotenv' ).config();
 const endpoint = process.env.endpoint;
@@ -18,7 +17,7 @@ const wallet = new Wallet(
 );
 const factory = new ContractFactory( wallet );
 const contractJson = require( '../build/contracts/StakingPrecompilesSelectors.json' );
-const contract = factory.createContract( contractJson.abi, "0x00000000000000000000000000000000000000FC" );
+const contract = factory.createContract( contractJson.abi, '0x00000000000000000000000000000000000000FC' );
 contract.wallet.addByPrivateKey( pk );
 
 contract.methods.Delegate(
