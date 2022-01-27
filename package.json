@@ -27,6 +27,6 @@
     "@harmony-js/network": "^0.1.56",
     "@harmony-js/utils": "^0.1.56",
     "dotenv": "^14.3.2",
-    "tslib": "^2.3.1",
+    "tslib": "^2.3.1"
   }
 }
