@@ -29,7 +29,7 @@ source .env
 ```
 1. Add the network to brownie
 ```bash
-brownie networks add live private host=${test_net} chainid=2
+brownie networks add live private host=${endpoint} chainid=2
 ```
 1. Run `./cleanandtest.sh`
 
